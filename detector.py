@@ -5,6 +5,7 @@ DeepForest Tree Crown Detection, Canopy Area & Carbon Sequestration Modeling
 
 import os
 import io
+import csv
 import time
 import json
 import logging
@@ -12,7 +13,6 @@ from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
 import cv2
 from PIL import Image
-import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -524,13 +524,16 @@ def analyze_tree_canopy(
     # 5. Generate GeoJSON and CSV Data
     geojson_data = generate_geojson(boxes, metrics)
     
-    # Generate CSV DataFrame
-    csv_rows = []
+    # Generate CSV text (stdlib csv module - avoids pulling in pandas just to serialize rows)
+    csv_fieldnames = ["Crown_ID", "Confidence", "X_Min", "Y_Min", "X_Max", "Y_Max", "Width_px", "Height_px", "Area_m2"]
+    csv_buffer = io.StringIO()
+    csv_writer = csv.DictWriter(csv_buffer, fieldnames=csv_fieldnames)
+    csv_writer.writeheader()
     for idx, b in enumerate(boxes):
         bw = b["xmax"] - b["xmin"]
         bh = b["ymax"] - b["ymin"]
         area_m2 = bw * bh * (gsd_meters_per_pixel ** 2)
-        csv_rows.append({
+        csv_writer.writerow({
             "Crown_ID": idx + 1,
             "Confidence": b["score"],
             "X_Min": round(b["xmin"], 1),
@@ -541,7 +544,7 @@ def analyze_tree_canopy(
             "Height_px": round(bh, 1),
             "Area_m2": round(area_m2, 2)
         })
-    df_csv = pd.DataFrame(csv_rows)
+    csv_text = csv_buffer.getvalue()
     
     inference_time_ms = round((time.time() - start_time) * 1000.0, 1)
     
@@ -554,7 +557,7 @@ def analyze_tree_canopy(
         "boxes": boxes,
         "annotated_image": annotated_rgb,
         "geojson": geojson_data,
-        "csv_text": df_csv.to_csv(index=False),
+        "csv_text": csv_text,
         "limitations": [
             {
                 "title": "Dense Canopy Overlaps",

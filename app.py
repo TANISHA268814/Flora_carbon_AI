@@ -20,6 +20,7 @@ from fastapi import FastAPI, UploadFile, File, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.concurrency import run_in_threadpool
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import gradio as gr
 
@@ -50,6 +51,15 @@ app = FastAPI(
     title="Flora Carbon AI",
     description="Autonomous Tree Crown Detection & Canopy Carbon Telemetry",
     version="1.4.0"
+)
+
+# Allow the separately-hosted static frontend (a different origin, e.g. a Hugging Face
+# Static Space) to call this API. No cookies/auth are used, so a wildcard origin is safe.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
 )
 
 # Mount sample images
