@@ -10,10 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PyTorch CPU-only first to keep image lightweight (< 200MB instead of 2.5GB CUDA)
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-# Copy requirements and install
+# Copy requirements and install. requirements.txt itself pins torch/torchvision to the
+# CPU-only wheel index via --extra-index-url (NOT --index-url, which would replace PyPI
+# entirely and break resolution of transitive deps like typing-extensions/flit_core).
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
