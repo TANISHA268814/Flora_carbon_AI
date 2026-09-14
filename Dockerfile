@@ -23,8 +23,10 @@ COPY . .
 # Generate sample benchmark images if not present
 RUN python create_samples.py
 
-# Expose port (7860 is standard for Hugging Face Spaces & Gradio)
+# Expose port (7860 is standard for Hugging Face Spaces & Gradio;
+# platforms like Cloud Run/Render/Railway override this via $PORT at runtime)
 EXPOSE 7860
+ENV PORT=7860
 
-# Run FastAPI / Uvicorn server
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+# Shell form so $PORT is resolved at container start (required for Cloud Run/Render/Railway)
+CMD uvicorn app:app --host 0.0.0.0 --port ${PORT}
