@@ -1,17 +1,90 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
+
 <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>Flora Carbon AI — Canopy Detect v1.4</title>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com" rel="preconnect"/>
-  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Flora Carbon AI - Canopy Detect v1.4</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='8' fill='%23064E3B'/%3E%3Cpath d='M18 7C12.4772 7 8 11.4772 8 17C8 22.5228 18 29 18 29C18 29 28 22.5228 28 17C28 11.4772 23.5228 7 18 7Z' fill='%2310B981' fill-opacity='0.35'/%3E%3Cpath d='M18 10C14.134 10 11 13.134 11 17C11 20.866 18 26 18 26C18 26 25 20.866 25 17C25 13.134 21.866 10 18 10Z' stroke='%2310B981' stroke-width='2' stroke-linejoin='round'/%3E%3Ccircle cx='18' cy='17' r='3' fill='%2334D399'/%3E%3C/svg%3E" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
   <style>
-    @layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}
-    ::-webkit-scrollbar{display:none;}
+    @layer base {
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        overscroll-behavior: none;
+      }
+
+      main>:first-child {
+        margin-top: 0 !important;
+      }
+
+      main>:last-child {
+        margin-bottom: 0 !important;
+      }
+    }
+
+    ::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Stage-transition helpers: KPI update pulse + toast notifications */
+    @keyframes flora-pulse-highlight {
+      0% { color: #6ffbbe; text-shadow: 0 0 12px rgba(111, 251, 190, 0.6); }
+      100% { color: inherit; text-shadow: none; }
+    }
+    .flora-flash-update {
+      animation: flora-pulse-highlight 700ms ease-out;
+    }
+
+    #flora-toast-stack {
+      position: fixed;
+      top: 76px;
+      right: 16px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .flora-toast {
+      pointer-events: auto;
+      min-width: 240px;
+      max-width: 360px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #d4e7d9;
+      background: #13231a;
+      border: 1px solid #3c4a42;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      opacity: 0;
+      transform: translateX(16px);
+      transition: opacity 220ms ease-out, transform 220ms ease-out;
+    }
+    .flora-toast.flora-toast-visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .flora-toast-error { border-color: #ffb4ab; }
+    .flora-toast-success { border-color: #4edea3; }
   </style>
   <script src="https://cdn.tailwindcss.com"></script>
   <script id="tailwind-config">
@@ -114,41 +187,58 @@
     };
   </script>
 </head>
+
 <body class="bg-background font-body-md text-on-surface">
-  <header class="fixed top-0 left-0 right-0 z-50 h-16 bg-surface-container-low/95 backdrop-blur-xl border-b border-outline-variant/30">
+  <div id="flora-toast-stack" aria-live="polite"></div>
+  <header
+    class="fixed top-0 left-0 right-0 z-50 h-16 bg-surface-container-low/95 backdrop-blur-xl border-b border-outline-variant/30">
     <div class="h-16 w-full px-space-lg flex items-center justify-between gap-space-md">
       <div class="flex items-center gap-space-md min-w-[280px]">
         <svg class="h-8 w-8 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="none">
-          <rect width="36" height="36" rx="8" fill="#064E3B"/>
-          <path d="M18 7C12.4772 7 8 11.4772 8 17C8 22.5228 18 29 18 29C18 29 28 22.5228 28 17C28 11.4772 23.5228 7 18 7Z" fill="#10B981" fill-opacity="0.25"/>
-          <path d="M18 10C14.134 10 11 13.134 11 17C11 20.866 18 26 18 26C18 26 25 20.866 25 17C25 13.134 21.866 10 18 10Z" stroke="#10B981" stroke-width="2" stroke-linejoin="round"/>
-          <circle cx="18" cy="17" r="3" fill="#34D399"/>
-          <path d="M6 18C6 18 11 12 18 12C25 12 30 18 30 18" stroke="#6EE7B7" stroke-width="1.5" stroke-dasharray="2 2" stroke-linecap="round"/>
-          <circle cx="27" cy="10" r="2.5" fill="#10B981"/>
+          <rect width="36" height="36" rx="8" fill="#064E3B" />
+          <path
+            d="M18 7C12.4772 7 8 11.4772 8 17C8 22.5228 18 29 18 29C18 29 28 22.5228 28 17C28 11.4772 23.5228 7 18 7Z"
+            fill="#10B981" fill-opacity="0.25" />
+          <path
+            d="M18 10C14.134 10 11 13.134 11 17C11 20.866 18 26 18 26C18 26 25 20.866 25 17C25 13.134 21.866 10 18 10Z"
+            stroke="#10B981" stroke-width="2" stroke-linejoin="round" />
+          <circle cx="18" cy="17" r="3" fill="#34D399" />
+          <path d="M6 18C6 18 11 12 18 12C25 12 30 18 30 18" stroke="#6EE7B7" stroke-width="1.5" stroke-dasharray="2 2"
+            stroke-linecap="round" />
+          <circle cx="27" cy="10" r="2.5" fill="#10B981" />
         </svg>
         <div class="flex flex-col">
-          <span class="font-headline-md text-headline-md tracking-tight text-primary leading-none">Flora Carbon AI</span>
-          <span class="font-label-data-sm text-label-data-sm text-on-surface-variant uppercase tracking-wider mt-0.5">Canopy Detect v1.4</span>
+          <span class="font-headline-md text-headline-md tracking-tight text-primary leading-none">Flora Carbon
+            AI</span>
+          <span
+            class="font-label-data-sm text-label-data-sm text-on-surface-variant uppercase tracking-wider mt-0.5">Canopy
+            Detect v1.4</span>
         </div>
       </div>
-      <div class="hidden xl:flex items-center gap-space-sm bg-surface-container/80 px-space-md py-1.5 rounded-full border border-outline-variant/40">
+      <div
+        class="hidden xl:flex items-center gap-space-sm bg-surface-container/80 px-space-md py-1.5 rounded-full border border-outline-variant/40">
         <span class="flex h-2 w-2 relative">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
         </span>
         <span class="font-label-data-sm text-label-data-sm text-on-surface">Kolkata Hackathon Prototype</span>
         <span class="text-outline-variant font-label-data-sm text-label-data-sm">|</span>
-        <span class="font-label-data-sm text-label-data-sm text-primary font-medium tracking-wide" id="telemetry-status-tag">Telemetry Online</span>
+        <span class="font-label-data-sm text-label-data-sm text-primary font-medium tracking-wide"
+          id="telemetry-status-tag">Telemetry Online</span>
       </div>
       <div class="flex items-center gap-space-md">
-        <div class="hidden md:flex flex-col items-end bg-surface-container-lowest/60 px-space-md py-1 rounded border border-outline-variant/30">
+        <div
+          class="hidden md:flex flex-col items-end bg-surface-container-lowest/60 px-space-md py-1 rounded border border-outline-variant/30">
           <div class="flex items-center gap-1.5 text-on-surface font-body-sm text-body-sm font-medium">
             <span class="material-symbols-outlined text-[16px] text-primary">public</span>
             <span id="header-sector-name">Sundarbans Biosphere - Sector 4B</span>
           </div>
-          <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono" id="header-coords-val">21.9497° N, 88.8997° E</span>
+          <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono"
+            id="header-coords-val">21.9497° N, 88.8997° E</span>
         </div>
-        <button id="quick-export-btn" class="hidden sm:inline-flex items-center gap-1.5 px-space-md py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface hover:text-on-surface border border-outline-variant/60 hover:border-primary rounded transition-all font-body-sm text-body-sm font-medium" type="button">
+        <button id="quick-export-btn"
+          class="hidden sm:inline-flex items-center gap-1.5 px-space-md py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface hover:text-on-surface border border-outline-variant/60 hover:border-primary rounded transition-all font-body-sm text-body-sm font-medium"
+          type="button">
           <span class="material-symbols-outlined text-[16px] text-primary">download</span>Quick Export
         </button>
         <div class="flex items-center gap-space-sm pl-space-sm border-l border-outline-variant/30">
@@ -161,48 +251,64 @@
     </div>
   </header>
 
-  <aside class="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-lowest border-r border-outline-variant/30 z-40 flex flex-col justify-between p-space-md">
+  <aside
+    class="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-lowest border-r border-outline-variant/30 z-40 flex flex-col justify-between p-space-md">
     <div class="flex flex-col gap-space-lg">
       <div class="px-space-sm">
-        <span class="font-label-data-sm text-label-data-sm text-outline uppercase tracking-wider font-semibold">Telemetry Modules</span>
+        <span
+          class="font-label-data-sm text-label-data-sm text-outline uppercase tracking-wider font-semibold">Telemetry
+          Modules</span>
       </div>
-      <nav class="flex flex-col gap-1.5" data-active-classes="bg-primary-container text-on-primary-container font-semibold">
-        <a aria-current="page" class="flex items-center gap-space-sm px-space-md py-2 rounded transition-all bg-primary-container text-on-primary-container font-semibold" data-path="canopy-monitor" href="#">
+      <nav class="flex flex-col gap-1.5"
+        data-active-classes="bg-primary-container text-on-primary-container font-semibold">
+        <a aria-current="page"
+          class="flex items-center gap-space-sm px-space-md py-2 rounded transition-all bg-primary-container text-on-primary-container font-semibold"
+          data-path="canopy-monitor" href="#">
           <span class="material-symbols-outlined text-[20px]">radar</span>Canopy Monitor
         </a>
-        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md" data-path="carbon-flux-analysis" href="#telemetry-card">
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="carbon-flux-analysis" href="#telemetry-card">
           <span class="material-symbols-outlined text-[20px]">co2</span>Carbon Flux Analysis
         </a>
-        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md" data-path="biomass-lidar-viewer" href="/gradio" target="_blank">
-          <span class="material-symbols-outlined text-[20px]">layers</span>Biomass LiDAR (Gradio)
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="biomass-lidar-viewer" href="#telemetry-card">
+          <span class="material-symbols-outlined text-[20px]">layers</span>Biomass Estimate
         </a>
-        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md" data-path="deforestation-alerts" href="#failure-modes-card">
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="deforestation-alerts" href="#failure-modes-card">
           <span class="material-symbols-outlined text-[20px]">crisis_alert</span>Threat Warnings
         </a>
-        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md" data-path="gis-sensor-matrix" href="#">
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="gis-sensor-matrix" href="#">
           <span class="material-symbols-outlined text-[20px]">satellite_alt</span>Sensor Array
         </a>
-        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md" data-path="audit-reports" href="#failure-modes-card">
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="audit-reports" href="#failure-modes-card">
           <span class="material-symbols-outlined text-[20px]">assessment</span>Audit Reports
         </a>
       </nav>
 
       <!-- Preset Sample Selector Quick List -->
       <div class="flex flex-col gap-1.5 pt-2 border-t border-outline-variant/20">
-        <span class="font-label-data-sm text-label-data-sm text-outline uppercase tracking-wider font-semibold px-space-sm">Preset Test Orthos</span>
+        <span
+          class="font-label-data-sm text-label-data-sm text-outline uppercase tracking-wider font-semibold px-space-sm">Preset
+          Test Orthos</span>
         <div id="sample-buttons-nav" class="flex flex-col gap-1">
           <!-- Dynamically populated from /api/samples -->
         </div>
       </div>
     </div>
-    <div class="p-space-md bg-surface-container-low/70 border border-outline-variant/30 rounded flex flex-col gap-space-xs">
+    <div
+      class="p-space-md bg-surface-container-low/70 border border-outline-variant/30 rounded flex flex-col gap-space-xs">
       <div class="flex items-center justify-between">
         <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono uppercase">L2 Engine</span>
-        <span class="font-label-data-sm text-label-data-sm text-primary font-mono" id="l2-engine-status">DEEPFOREST</span>
+        <span class="font-label-data-sm text-label-data-sm text-primary font-mono"
+          id="l2-engine-status">DEEPFOREST</span>
       </div>
       <div class="flex items-center justify-between">
         <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono uppercase">Latency</span>
-        <span class="font-label-data-sm text-label-data-sm text-on-surface font-mono" id="engine-latency-val">42ms</span>
+        <span class="font-label-data-sm text-label-data-sm text-on-surface font-mono"
+          id="engine-latency-val">42ms</span>
       </div>
     </div>
   </aside>
@@ -212,13 +318,17 @@
       <div class="flex flex-col w-full text-on-surface">
         <div class="p-space-lg flex flex-col gap-space-lg">
           <!-- Top System Context Row -->
-          <div class="flex flex-wrap items-center justify-between gap-space-md bg-surface-container/60 p-space-md rounded-lg shadow-sm">
+          <div
+            class="flex flex-wrap items-center justify-between gap-space-md bg-surface-container/60 p-space-md rounded-lg shadow-sm">
             <div class="flex items-center gap-space-md">
-              <div class="flex items-center gap-space-xs px-space-sm py-1 bg-surface-container-high rounded text-primary">
+              <div
+                class="flex items-center gap-space-xs px-space-sm py-1 bg-surface-container-high rounded text-primary">
                 <span class="material-symbols-outlined text-[18px]">satellite_alt</span>
-                <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider font-semibold">Sensor Payload: Sentinel-2B / UAV Ortho</span>
+                <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider font-semibold">Sensor
+                  Payload: Sentinel-2B / UAV Ortho</span>
               </div>
-              <div class="hidden sm:flex items-center gap-1.5 font-label-data-sm text-label-data-sm text-on-surface-variant">
+              <div
+                class="hidden sm:flex items-center gap-1.5 font-label-data-sm text-label-data-sm text-on-surface-variant">
                 <span>Projection:</span>
                 <span class="text-on-surface font-mono">EPSG:32645 (WGS 84 / UTM Zone 45N)</span>
               </div>
@@ -226,50 +336,65 @@
             <div class="flex items-center gap-space-md">
               <div class="flex items-center gap-2">
                 <span class="relative flex h-2.5 w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                   <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
                 </span>
-                <span class="font-label-data-sm text-label-data-sm text-primary font-medium tracking-wide" id="inference-status-text">Inference Active (Tile Sync 99.8%)</span>
+                <span class="font-label-data-sm text-label-data-sm text-primary font-medium tracking-wide"
+                  id="inference-status-text">Inference Active (Tile Sync 99.8%)</span>
               </div>
               <div class="h-4 w-px bg-surface-container-highest"></div>
-              <span class="font-label-data-sm text-label-data-sm text-on-surface-variant">Model Checkpoint: <strong class="text-on-surface font-mono">CN-v3.4.1b / DeepForest</strong></span>
+              <span class="font-label-data-sm text-label-data-sm text-on-surface-variant">Engine: <strong
+                  class="text-on-surface font-mono">CN-v3.4.1b / Spectral-ExG</strong></span>
             </div>
           </div>
 
           <!-- Main Operational Workspace Grid -->
           <div class="grid grid-cols-1 xl:grid-cols-12 gap-space-lg items-start">
-            
+
             <!-- 1. LEFT CONTROL PANEL (Approx 320-340px -> xl:col-span-3) -->
-            <aside class="xl:col-span-3 flex flex-col gap-space-md bg-surface-container-low/90 backdrop-blur-md p-space-md rounded-xl shadow-md">
+            <aside
+              class="xl:col-span-3 flex flex-col gap-space-md bg-surface-container-low/90 backdrop-blur-md p-space-md rounded-xl shadow-md">
               <!-- Control Panel Header -->
               <div class="flex items-center justify-between pb-space-xs">
                 <div class="flex items-center gap-2">
                   <span class="material-symbols-outlined text-primary text-[20px]">tune</span>
-                  <h2 class="font-headline-md text-headline-md text-on-surface text-[17px] leading-tight">Input Parameters</h2>
+                  <h2 class="font-headline-md text-headline-md text-on-surface text-[17px] leading-tight">Input
+                    Parameters</h2>
                 </div>
-                <span class="font-label-data-sm text-label-data-sm px-2 py-0.5 rounded bg-primary/10 text-primary font-mono tracking-tight">
+                <span
+                  class="font-label-data-sm text-label-data-sm px-2 py-0.5 rounded bg-primary/10 text-primary font-mono tracking-tight">
                   CanopyNet-v3
                 </span>
               </div>
 
               <!-- Tile Ingestion Upload Box -->
               <div class="flex flex-col gap-1.5">
-                <label class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-on-surface-variant font-medium">Orthomosaic Ingestion</label>
-                <input type="file" id="tile-file-input" class="hidden" accept="image/*,.tif,.tiff"/>
-                <div id="tile-upload-box" class="group relative flex flex-col items-center justify-center p-space-md rounded-lg bg-surface-container/70 hover:bg-surface-container transition-all cursor-pointer text-center">
-                  <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform mb-2">
+                <label
+                  class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-on-surface-variant font-medium">Orthomosaic
+                  Ingestion</label>
+                <input type="file" id="tile-file-input" class="hidden" accept="image/*,.tif,.tiff" />
+                <div id="tile-upload-box"
+                  class="group relative flex flex-col items-center justify-center p-space-md rounded-lg bg-surface-container/70 hover:bg-surface-container transition-all cursor-pointer text-center">
+                  <div
+                    class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform mb-2">
                     <span class="material-symbols-outlined text-[24px]">cloud_upload</span>
                   </div>
-                  <span class="font-body-sm text-body-sm font-medium text-on-surface">Drop GeoTIFF or Orthomosaic tile here</span>
-                  <span class="font-body-sm text-body-sm text-primary underline mt-0.5 cursor-pointer">or Browse Files</span>
-                  <span class="font-label-data-sm text-label-data-sm text-outline mt-1 font-mono">GeoTIFF, PNG, JPG (Max 50MB)</span>
+                  <span class="font-body-sm text-body-sm font-medium text-on-surface">Drop GeoTIFF or Orthomosaic tile
+                    here</span>
+                  <span class="font-body-sm text-body-sm text-primary underline mt-0.5 cursor-pointer">or Browse
+                    Files</span>
+                  <span class="font-label-data-sm text-label-data-sm text-outline mt-1 font-mono">GeoTIFF, PNG, JPG (Max
+                    50MB)</span>
                 </div>
                 <!-- Active Loaded Tile Info -->
                 <div class="flex items-start gap-2 bg-surface-container-high/90 p-space-sm rounded mt-1">
                   <span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">check_circle</span>
                   <div class="flex flex-col min-w-0">
-                    <span class="font-label-data-sm text-label-data-sm text-on-surface font-mono truncate font-medium" id="loaded-tile-name">Tile_WB_Sundarbans_2024_08.tif</span>
-                    <span class="font-label-data-sm text-label-data-sm text-on-surface-variant" id="loaded-tile-info">18.4 MB • 4K Orthomosaic 0.20m GSD</span>
+                    <span class="font-label-data-sm text-label-data-sm text-on-surface font-mono truncate font-medium"
+                      id="loaded-tile-name">Tile_WB_Sundarbans_2024_08.tif</span>
+                    <span class="font-label-data-sm text-label-data-sm text-on-surface-variant"
+                      id="loaded-tile-info">18.4 MB • 4K Orthomosaic 0.20m GSD</span>
                   </div>
                 </div>
               </div>
@@ -277,19 +402,29 @@
               <!-- Detection Confidence Slider -->
               <div class="flex flex-col gap-2 pt-space-xs">
                 <div class="flex items-center justify-between">
-                  <label class="font-body-sm text-body-sm text-on-surface font-medium flex items-center gap-1" for="conf-slider">
+                  <label class="font-body-sm text-body-sm text-on-surface font-medium flex items-center gap-1"
+                    for="conf-slider">
                     Confidence Threshold
-                    <span class="material-symbols-outlined text-[14px] text-outline cursor-help" title="Minimum softmax probability score required for individual crown polygonization">info</span>
+                    <span class="material-symbols-outlined text-[14px] text-outline cursor-help"
+                      title="Minimum softmax probability score required for individual crown polygonization">info</span>
                   </label>
-                  <span class="font-label-data-md text-label-data-md px-2 py-0.5 rounded bg-surface-container-highest text-primary font-mono font-semibold" id="conf-val">0.40</span>
+                  <span
+                    class="font-label-data-md text-label-data-md px-2 py-0.5 rounded bg-surface-container-highest text-primary font-mono font-semibold"
+                    id="conf-val">0.40</span>
                 </div>
-                <input class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary" id="conf-slider" max="0.90" min="0.10" oninput="document.getElementById('conf-val').innerText = parseFloat(this.value).toFixed(2)" step="0.05" type="range" value="0.40"/>
-                <div class="flex justify-between items-center font-label-data-sm text-label-data-sm text-outline font-mono">
+                <input
+                  class="w-full h-1.5 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary"
+                  id="conf-slider" max="0.90" min="0.10"
+                  oninput="document.getElementById('conf-val').innerText = parseFloat(this.value).toFixed(2)"
+                  step="0.05" type="range" value="0.40" />
+                <div
+                  class="flex justify-between items-center font-label-data-sm text-label-data-sm text-outline font-mono">
                   <span>0.10 (Recall)</span>
                   <span>0.50</span>
                   <span>0.90 (Precision)</span>
                 </div>
-                <span class="font-body-sm text-body-sm text-on-surface-variant text-[12px] leading-tight">Filter out low-certainty crown detections from dense shadows and brush.</span>
+                <span class="font-body-sm text-body-sm text-on-surface-variant text-[12px] leading-tight">Filter out
+                  low-certainty crown detections from dense shadows and brush.</span>
               </div>
 
               <!-- Ground Sampling Distance (GSD) Input Box -->
@@ -297,55 +432,73 @@
                 <div class="flex items-center justify-between">
                   <label class="font-body-sm text-body-sm text-on-surface font-medium flex items-center gap-1">
                     Ground Sampling Distance (GSD)
-                    <span class="material-symbols-outlined text-[14px] text-outline cursor-help" title="Pixel spatial resolution on the ground. Crucial for canopy m² inference.">help</span>
+                    <span class="material-symbols-outlined text-[14px] text-outline cursor-help"
+                      title="Pixel spatial resolution on the ground. Crucial for canopy m² inference.">help</span>
                   </label>
-                  <span class="font-label-data-sm text-label-data-sm text-outline uppercase font-mono">UAV Calibrated</span>
+                  <span class="font-label-data-sm text-label-data-sm text-outline uppercase font-mono">UAV
+                    Calibrated</span>
                 </div>
                 <div class="relative flex items-center">
-                  <input id="gsd-input-box" class="w-full bg-surface-container-lowest text-on-surface font-label-data-md text-label-data-md font-mono px-3 py-2 rounded focus:outline-none focus:ring-1 focus:ring-primary transition-all" step="0.01" type="number" value="0.20"/>
-                  <div class="absolute right-3 font-label-data-sm text-label-data-sm text-primary font-mono pointer-events-none">
+                  <input id="gsd-input-box"
+                    class="w-full bg-surface-container-lowest text-on-surface font-label-data-md text-label-data-md font-mono px-3 py-2 rounded focus:outline-none focus:ring-1 focus:ring-primary transition-all"
+                    step="0.01" type="number" value="0.20" />
+                  <div
+                    class="absolute right-3 font-label-data-sm text-label-data-sm text-primary font-mono pointer-events-none">
                     m / px
                   </div>
                 </div>
-                <span class="font-body-sm text-body-sm text-on-surface-variant text-[12px]">Calibrated for high-altitude UAV flight at 120m AGL.</span>
+                <span class="font-body-sm text-body-sm text-on-surface-variant text-[12px]">Calibrated for high-altitude
+                  UAV flight at 120m AGL.</span>
               </div>
 
               <!-- Telemetry Layer Quick Toggles -->
               <div class="flex flex-col gap-2 pt-space-xs">
-                <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline font-semibold">Overlay Matrices</span>
+                <span
+                  class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline font-semibold">Overlay
+                  Matrices</span>
                 <!-- Toggle 1 -->
-                <label class="flex items-center justify-between p-2 rounded bg-surface-container/60 hover:bg-surface-container cursor-pointer transition-all">
+                <label
+                  class="flex items-center justify-between p-2 rounded bg-surface-container/60 hover:bg-surface-container cursor-pointer transition-all">
                   <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-primary text-[18px]">select_all</span>
                     <span class="font-body-sm text-body-sm text-on-surface">Show Bounding Boxes (AI Detected)</span>
                   </div>
-                  <input id="chk-bounding-boxes" checked="" class="w-4 h-4 rounded accent-primary bg-surface-container-lowest cursor-pointer" type="checkbox"/>
+                  <input id="chk-bounding-boxes" checked=""
+                    class="w-4 h-4 rounded accent-primary bg-surface-container-lowest cursor-pointer" type="checkbox" />
                 </label>
                 <!-- Toggle 2 -->
-                <label class="flex items-center justify-between p-2 rounded bg-surface-container/60 hover:bg-surface-container cursor-pointer transition-all">
+                <label
+                  class="flex items-center justify-between p-2 rounded bg-surface-container/60 hover:bg-surface-container cursor-pointer transition-all">
                   <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-on-surface-variant text-[18px]">gradient</span>
                     <span class="font-body-sm text-body-sm text-on-surface">Heatmap Density Gradient</span>
                   </div>
-                  <input id="chk-heatmap" class="w-4 h-4 rounded accent-primary bg-surface-container-lowest cursor-pointer" type="checkbox"/>
+                  <input id="chk-heatmap"
+                    class="w-4 h-4 rounded accent-primary bg-surface-container-lowest cursor-pointer" type="checkbox" />
                 </label>
                 <!-- Toggle 3 -->
-                <label class="flex items-center justify-between p-2 rounded bg-surface-container/60 hover:bg-surface-container cursor-pointer transition-all">
+                <label
+                  class="flex items-center justify-between p-2 rounded bg-surface-container/60 hover:bg-surface-container cursor-pointer transition-all">
                   <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-primary text-[18px]">adjust</span>
                     <span class="font-body-sm text-body-sm text-on-surface">Display Crown Centroids</span>
                   </div>
-                  <input id="chk-centroids" checked="" class="w-4 h-4 rounded accent-primary bg-surface-container-lowest cursor-pointer" type="checkbox"/>
+                  <input id="chk-centroids" checked=""
+                    class="w-4 h-4 rounded accent-primary bg-surface-container-lowest cursor-pointer" type="checkbox" />
                 </label>
               </div>
 
               <!-- Primary & Secondary CTA Actions -->
               <div class="flex flex-col gap-2 pt-space-sm mt-auto">
-                <button id="btn-analyze-action" class="w-full flex items-center justify-center gap-2 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary py-2.5 px-space-md rounded font-body-md text-body-md font-semibold transition-all shadow-md active:scale-[0.99]" type="button">
+                <button id="btn-analyze-action"
+                  class="w-full flex items-center justify-center gap-2 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary py-2.5 px-space-md rounded font-body-md text-body-md font-semibold transition-all shadow-md active:scale-[0.99]"
+                  type="button">
                   <span class="material-symbols-outlined text-[20px]" id="analyze-action-icon">psychology</span>
                   <span id="analyze-action-text">Analyze Tree Canopy</span>
                 </button>
-                <button id="btn-export-action" class="w-full flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface py-2 px-space-md rounded font-body-sm text-body-sm font-medium transition-all" type="button">
+                <button id="btn-export-action"
+                  class="w-full flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface py-2 px-space-md rounded font-body-sm text-body-sm font-medium transition-all"
+                  type="button">
                   <span class="material-symbols-outlined text-[18px] text-primary">ios_share</span>
                   <span>Export GeoJSON / CSV Report</span>
                 </button>
@@ -354,49 +507,67 @@
 
             <!-- 2. MAIN CONTENT AREA (Split Grid: xl:col-span-9) -->
             <section class="xl:col-span-9 grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
-              
+
               <!-- SATELLITE MAP VIEWER (Approx 60-65% width -> lg:col-span-7) -->
               <div class="lg:col-span-7 flex flex-col bg-surface-container-low rounded-xl overflow-hidden shadow-xl">
                 <!-- Map Control Header -->
                 <div class="flex flex-wrap items-center justify-between p-space-md bg-surface-container-low/95">
                   <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-primary text-[20px]">travel_explore</span>
-                    <span class="font-headline-md text-headline-md text-[16px] text-on-surface">Geospatial Orthomosaic Preview</span>
+                    <span class="font-headline-md text-headline-md text-[16px] text-on-surface">Geospatial Orthomosaic
+                      Preview</span>
                   </div>
                   <!-- Viewport Toolbar -->
-                  <div class="flex items-center gap-1 bg-surface-container-lowest/80 p-1 rounded font-label-data-sm text-label-data-sm">
-                    <button id="viewer-zoom-in" class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Zoom In" type="button">
+                  <div
+                    class="flex items-center gap-1 bg-surface-container-lowest/80 p-1 rounded font-label-data-sm text-label-data-sm">
+                    <button id="viewer-zoom-in"
+                      class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors"
+                      title="Zoom In" type="button">
                       <span class="material-symbols-outlined text-[18px]">zoom_in</span>
                     </button>
-                    <button id="viewer-zoom-out" class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Zoom Out" type="button">
+                    <button id="viewer-zoom-out"
+                      class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors"
+                      title="Zoom Out" type="button">
                       <span class="material-symbols-outlined text-[18px]">zoom_out</span>
                     </button>
-                    <button id="viewer-zoom-reset" class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Reset Recenter View" type="button">
+                    <button id="viewer-zoom-reset"
+                      class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors"
+                      title="Reset Recenter View" type="button">
                       <span class="material-symbols-outlined text-[18px]">center_focus_strong</span>
                     </button>
                     <div class="w-px h-3 bg-surface-container-highest mx-0.5"></div>
-                    <button id="viewer-toggle-layers" class="p-1 rounded hover:bg-surface-container text-primary transition-colors" title="Toggle Layer Stacks" type="button">
+                    <button id="viewer-toggle-layers"
+                      class="p-1 rounded hover:bg-surface-container text-primary transition-colors"
+                      title="Toggle Layer Stacks" type="button">
                       <span class="material-symbols-outlined text-[18px]">layers</span>
                     </button>
-                    <button id="viewer-fullscreen" class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors" title="Expand Fullscreen" type="button">
+                    <button id="viewer-fullscreen"
+                      class="p-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors"
+                      title="Expand Fullscreen" type="button">
                       <span class="material-symbols-outlined text-[18px]">fullscreen</span>
                     </button>
                   </div>
                 </div>
 
                 <!-- Aerial Canvas Container with Overlays -->
-                <div class="relative w-full aspect-[4/3] bg-surface-container-lowest overflow-hidden select-none" id="aerial-canvas-wrapper">
-                  <!-- Loading Overlay -->
-                  <div id="loading-spinner" class="hidden absolute inset-0 z-30 bg-surface-container-lowest/85 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
+                <div class="relative w-full aspect-[4/3] bg-surface-container-lowest overflow-hidden select-none"
+                  id="aerial-canvas-wrapper">
+                  <!-- Loading Overlay (fades in/out instead of an abrupt hidden-class pop) -->
+                  <div id="loading-spinner"
+                    class="opacity-0 pointer-events-none absolute inset-0 z-30 bg-surface-container-lowest/85 backdrop-blur-sm flex flex-col items-center justify-center gap-3 transition-opacity duration-300 ease-out">
                     <div class="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <span class="font-label-data-sm text-primary font-mono tracking-wide animate-pulse">Running DeepForest Tree Crown Inference...</span>
+                    <span id="loading-spinner-text" class="font-label-data-sm text-primary font-mono tracking-wide animate-pulse">Running
+                      Spectral Crown Inference...</span>
                   </div>
 
                   <!-- Full-Bleed Aerial Photograph Background / Output -->
-                  <img id="aerial-ortho-img" alt="High-resolution aerial drone orthomosaic of forest canopy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-200" src="" data-default-sample="Sundarbans_Sector_4B.png"/>
+                  <img id="aerial-ortho-img" alt="High-resolution aerial drone orthomosaic of forest canopy"
+                    class="absolute inset-0 w-full h-full object-cover transition-all duration-300 ease-out" src=""
+                    data-default-sample="Sundarbans_Sector_4B.png" />
 
                   <!-- Dynamic SVG Geospatial Bounding Vector Layer (populated or overlaid by backend) -->
-                  <svg id="dynamic-svg-layer" class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none" viewBox="0 0 800 600">
+                  <svg id="dynamic-svg-layer" class="absolute inset-0 w-full h-full pointer-events-none"
+                    preserveAspectRatio="none" viewBox="0 0 800 600">
                     <defs>
                       <filter height="140%" id="emerald-glow" width="140%" x="-20%" y="-20%">
                         <feGaussianBlur result="blur" stdDeviation="2"></feGaussianBlur>
@@ -409,7 +580,8 @@
                   <div id="floating-labels-container" class="absolute inset-0 pointer-events-none"></div>
 
                   <!-- Top-Right HUD Coordinates Readout -->
-                  <div class="absolute top-3 right-3 bg-surface-container-lowest/85 backdrop-blur-sm px-2.5 py-1.5 rounded font-label-data-sm text-[11px] font-mono text-on-surface flex flex-col items-end gap-0.5 shadow-md">
+                  <div
+                    class="absolute top-3 right-3 bg-surface-container-lowest/85 backdrop-blur-sm px-2.5 py-1.5 rounded font-label-data-sm text-[11px] font-mono text-on-surface flex flex-col items-end gap-0.5 shadow-md">
                     <div class="flex items-center gap-1.5 text-primary">
                       <span class="material-symbols-outlined text-[14px]">my_location</span>
                       <span id="hud-coordinates-text">21°56'58.9"N 88°53'58.9"E</span>
@@ -418,9 +590,11 @@
                   </div>
 
                   <!-- Top-Left Scale & Compass Indicator -->
-                  <div class="absolute top-3 left-3 bg-surface-container-lowest/80 backdrop-blur-sm px-2 py-1 rounded flex items-center gap-2">
+                  <div
+                    class="absolute top-3 left-3 bg-surface-container-lowest/80 backdrop-blur-sm px-2 py-1 rounded flex items-center gap-2">
                     <div class="flex flex-col items-center">
-                      <span class="font-label-data-sm text-[9px] font-mono text-on-surface leading-none mb-0.5" id="hud-scale-text">50m</span>
+                      <span class="font-label-data-sm text-[9px] font-mono text-on-surface leading-none mb-0.5"
+                        id="hud-scale-text">50m</span>
                       <div class="w-12 h-1 bg-on-surface flex justify-between">
                         <div class="w-0.5 h-1 bg-primary"></div>
                         <div class="w-0.5 h-1 bg-primary"></div>
@@ -431,7 +605,8 @@
                   </div>
 
                   <!-- Bottom-Left Telemetry Summary Overlay -->
-                  <div class="absolute bottom-3 left-3 max-w-[85%] bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1.5 rounded font-label-data-sm text-label-data-sm text-on-surface flex items-center gap-2 shadow-lg">
+                  <div
+                    class="absolute bottom-3 left-3 max-w-[85%] bg-surface-container-lowest/90 backdrop-blur-md px-3 py-1.5 rounded font-label-data-sm text-label-data-sm text-on-surface flex items-center gap-2 shadow-lg">
                     <span class="h-2 w-2 rounded-full bg-primary shrink-0 animate-pulse"></span>
                     <span class="font-medium text-primary" id="hud-detected-crowns">Detected: -- crowns</span>
                     <span class="text-surface-container-highest">|</span>
@@ -441,15 +616,23 @@
                   </div>
 
                   <!-- Bottom-Right Mode Selector Tabs -->
-                  <div class="absolute bottom-3 right-3 flex items-center bg-surface-container-lowest/90 backdrop-blur-md p-1 rounded shadow-lg">
-                    <button class="px-2.5 py-1 rounded bg-primary text-on-primary font-label-data-sm text-[11px] font-semibold" type="button">RGB Ortho</button>
-                    <button class="px-2.5 py-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-data-sm text-[11px] transition-colors" type="button">NDVI</button>
-                    <button class="px-2.5 py-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-data-sm text-[11px] transition-colors" type="button">CHM</button>
+                  <div
+                    class="absolute bottom-3 right-3 flex items-center bg-surface-container-lowest/90 backdrop-blur-md p-1 rounded shadow-lg">
+                    <button
+                      class="px-2.5 py-1 rounded bg-primary text-on-primary font-label-data-sm text-[11px] font-semibold"
+                      type="button">RGB Ortho</button>
+                    <button
+                      class="px-2.5 py-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-data-sm text-[11px] transition-colors"
+                      type="button">NDVI</button>
+                    <button
+                      class="px-2.5 py-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-data-sm text-[11px] transition-colors"
+                      type="button">CHM</button>
                   </div>
                 </div>
 
                 <!-- Viewer Footer Metadata Ribbon -->
-                <div class="px-space-md py-2.5 bg-surface-container-high/60 flex items-center justify-between text-on-surface-variant font-label-data-sm text-label-data-sm">
+                <div
+                  class="px-space-md py-2.5 bg-surface-container-high/60 flex items-center justify-between text-on-surface-variant font-label-data-sm text-label-data-sm">
                   <div class="flex items-center gap-space-md">
                     <span>FOV: <strong class="text-on-surface font-mono" id="hud-fov-val">342m x 256m</strong></span>
                     <span>Sub-Sampling: <strong class="text-on-surface font-mono">Bilinear 1:1</strong></span>
@@ -468,9 +651,11 @@
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-primary text-[20px]">insights</span>
-                      <h3 class="font-headline-md text-headline-md text-[17px] text-on-surface">Canopy &amp; Carbon Telemetry</h3>
+                      <h3 class="font-headline-md text-headline-md text-[17px] text-on-surface">Canopy &amp; Carbon
+                        Telemetry</h3>
                     </div>
-                    <span class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary font-label-data-sm text-[11px] font-mono">
+                    <span
+                      class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary font-label-data-sm text-[11px] font-mono">
                       <span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
                       LIVE CALC
                     </span>
@@ -481,38 +666,53 @@
                     <!-- Stat 1: Crown Count -->
                     <div class="flex items-center justify-between bg-surface-container p-3 rounded-lg">
                       <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center text-primary">
+                        <div
+                          class="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center text-primary">
                           <span class="material-symbols-outlined text-[22px]">forest</span>
                         </div>
                         <div class="flex flex-col">
-                          <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">Total Tree Crowns Count</span>
-                          <span class="font-headline-lg text-headline-lg text-on-surface text-[24px] font-bold font-mono leading-tight" id="display-tree-count">1,482</span>
+                          <span
+                            class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">Total
+                            Tree Crowns Count</span>
+                          <span
+                            class="font-headline-lg text-headline-lg text-on-surface text-[24px] font-bold font-mono leading-tight"
+                            id="display-tree-count">1,482</span>
                         </div>
                       </div>
                       <div class="flex flex-col items-end">
-                        <span class="font-label-data-sm text-label-data-sm px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold font-mono" id="display-delta-badge">
+                        <span
+                          class="font-label-data-sm text-label-data-sm px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold font-mono"
+                          id="display-delta-badge">
                           +128 vs 2023
                         </span>
-                        <span class="font-body-sm text-[11px] text-on-surface-variant mt-0.5" id="display-trees-per-ha">Historical Delta</span>
+                        <span class="font-body-sm text-[11px] text-on-surface-variant mt-0.5"
+                          id="display-trees-per-ha">Historical Delta</span>
                       </div>
                     </div>
 
                     <!-- Stat 2: Estimated Canopy Area -->
                     <div class="flex items-center justify-between bg-surface-container p-3 rounded-lg">
                       <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center text-primary">
+                        <div
+                          class="w-10 h-10 rounded bg-surface-container-high flex items-center justify-center text-primary">
                           <span class="material-symbols-outlined text-[22px]">polyline</span>
                         </div>
                         <div class="flex flex-col">
-                          <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">Total Canopy Footprint</span>
+                          <span
+                            class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">Total
+                            Canopy Footprint</span>
                           <div class="flex items-baseline gap-1.5">
-                            <span class="font-headline-lg text-headline-lg text-on-surface text-[24px] font-bold font-mono leading-tight" id="display-canopy-m2">34,860</span>
-                            <span class="font-label-data-md text-label-data-md text-primary font-mono font-medium" id="display-canopy-ha">m² (3.486 ha)</span>
+                            <span
+                              class="font-headline-lg text-headline-lg text-on-surface text-[24px] font-bold font-mono leading-tight"
+                              id="display-canopy-m2">34,860</span>
+                            <span class="font-label-data-md text-label-data-md text-primary font-mono font-medium"
+                              id="display-canopy-ha">m² (3.486 ha)</span>
                           </div>
                         </div>
                       </div>
                       <div class="flex flex-col items-end text-right">
-                        <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono" id="display-gsd-val">GSD 0.20 m/px</span>
+                        <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono"
+                          id="display-gsd-val">GSD 0.20 m/px</span>
                         <span class="font-body-sm text-[11px] text-outline">Raster Polygonized</span>
                       </div>
                     </div>
@@ -523,21 +723,34 @@
                         <!-- Circular Gauge SVG -->
                         <div class="relative w-11 h-11 flex items-center justify-center">
                           <svg class="w-11 h-11 transform -rotate-90" viewBox="0 0 36 36">
-                            <path class="text-surface-container-highest" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.5"></path>
-                            <path id="svg-gauge-circle" class="text-primary transition-all duration-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="72.4, 100" stroke-linecap="round" stroke-width="3.5"></path>
+                            <path class="text-surface-container-highest"
+                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              fill="none" stroke="currentColor" stroke-width="3.5"></path>
+                            <path id="svg-gauge-circle" class="text-primary transition-all duration-700"
+                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              fill="none" stroke="currentColor" stroke-dasharray="72.4, 100" stroke-linecap="round"
+                              stroke-width="3.5"></path>
                           </svg>
-                          <span class="absolute font-label-data-sm text-[10px] font-bold text-on-surface font-mono" id="display-gauge-text">72%</span>
+                          <span class="absolute font-label-data-sm text-[10px] font-bold text-on-surface font-mono"
+                            id="display-gauge-text">72%</span>
                         </div>
                         <div class="flex flex-col">
-                          <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">Canopy Cover Index</span>
-                          <span class="font-headline-lg text-headline-lg text-on-surface text-[24px] font-bold font-mono leading-tight" id="display-cover-pct">72.4%</span>
+                          <span
+                            class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">Canopy
+                            Cover Index</span>
+                          <span
+                            class="font-headline-lg text-headline-lg text-on-surface text-[24px] font-bold font-mono leading-tight"
+                            id="display-cover-pct">72.4%</span>
                         </div>
                       </div>
                       <div class="flex flex-col items-end">
-                        <span class="font-label-data-sm text-label-data-sm px-2 py-0.5 rounded bg-primary-container/20 text-primary-fixed font-semibold font-mono" id="display-class-badge">
+                        <span
+                          class="font-label-data-sm text-label-data-sm px-2 py-0.5 rounded bg-primary-container/20 text-primary-fixed font-semibold font-mono"
+                          id="display-class-badge">
                           Dense Class A
                         </span>
-                        <span class="font-body-sm text-[11px] text-on-surface-variant mt-0.5" id="display-fao-tier">UN FAO Tier 3</span>
+                        <span class="font-body-sm text-[11px] text-on-surface-variant mt-0.5" id="display-fao-tier">UN
+                          FAO Tier 3</span>
                       </div>
                     </div>
                   </div>
@@ -547,15 +760,21 @@
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-primary text-[18px]">co2</span>
-                        <span class="font-body-sm text-body-sm font-medium text-on-surface">Above-Ground Biomass (AGB) Inferred</span>
+                        <span class="font-body-sm text-body-sm font-medium text-on-surface">Above-Ground Biomass (AGB)
+                          Inferred</span>
                       </div>
-                      <span class="font-label-data-lg text-label-data-lg text-primary font-bold font-mono" id="display-carbon-sequestration">892.4 <span class="text-body-sm font-normal text-on-surface-variant">t CO₂e</span></span>
+                      <span class="font-label-data-lg text-label-data-lg text-primary font-bold font-mono"
+                        id="display-carbon-sequestration">892.4 <span
+                          class="text-body-sm font-normal text-on-surface-variant">t CO₂e</span></span>
                     </div>
                     <div class="w-full bg-surface-container-lowest h-2 rounded-full overflow-hidden flex">
-                      <div id="agb-bar-fill" class="bg-primary h-full transition-all duration-500" style="width: 78%" title="Sundarban Mangrove Allometric Model"></div>
-                      <div class="bg-secondary h-full transition-all duration-500" style="width: 22%" title="Understory Variance"></div>
+                      <div id="agb-bar-fill" class="bg-primary h-full transition-all duration-500" style="width: 78%"
+                        title="Sundarban Mangrove Allometric Model"></div>
+                      <div class="bg-secondary h-full transition-all duration-500" style="width: 22%"
+                        title="Understory Variance"></div>
                     </div>
-                    <div class="flex justify-between items-center font-label-data-sm text-[10px] text-outline font-mono">
+                    <div
+                      class="flex justify-between items-center font-label-data-sm text-[10px] text-outline font-mono">
                       <span>Mangrove Allometry (Chave 2014)</span>
                       <span id="display-confidence-variance">Confidence ±4.2%</span>
                     </div>
@@ -563,13 +782,16 @@
                 </div>
 
                 <!-- RIGHT BOTTOM CARD: Model Limitations & Transparency Report -->
-                <div class="flex flex-col bg-surface-container-low p-space-md rounded-xl shadow-md gap-space-sm bg-gradient-to-b from-secondary-container/10 to-transparent" id="failure-modes-card">
+                <div
+                  class="flex flex-col bg-surface-container-low p-space-md rounded-xl shadow-md gap-space-sm bg-gradient-to-b from-secondary-container/10 to-transparent"
+                  id="failure-modes-card">
                   <div class="flex items-center justify-between pb-1">
                     <div class="flex items-center gap-2">
                       <span class="material-symbols-outlined text-secondary text-[20px]">warning</span>
                       <h3 class="font-headline-md text-headline-md text-[16px] text-secondary">Known Failure Modes</h3>
                     </div>
-                    <span class="font-label-data-sm text-[11px] px-2 py-0.5 rounded bg-secondary-container/30 text-secondary font-mono">
+                    <span
+                      class="font-label-data-sm text-[11px] px-2 py-0.5 rounded bg-secondary-container/30 text-secondary font-mono">
                       CanopyNet v1.2-alpha
                     </span>
                   </div>
@@ -581,9 +803,11 @@
                     <div class="flex items-start gap-2.5 bg-surface-container/80 p-2.5 rounded">
                       <span class="material-symbols-outlined text-secondary text-[16px] shrink-0 mt-0.5">grain</span>
                       <div class="flex flex-col">
-                        <span class="font-body-sm text-body-sm font-semibold text-secondary">Dense Canopy Overlaps</span>
+                        <span class="font-body-sm text-body-sm font-semibold text-secondary">Dense Canopy
+                          Overlaps</span>
                         <span class="font-body-sm text-[12px] text-on-surface-variant leading-snug">
-                          Merged interlocking crowns in mature rainforest canopies may be under-segmented by 8–14% without LiDAR height profiling.
+                          Merged interlocking crowns in mature rainforest canopies may be under-segmented by 8–14%
+                          without LiDAR height profiling.
                         </span>
                       </div>
                     </div>
@@ -592,7 +816,8 @@
                       <div class="flex flex-col">
                         <span class="font-body-sm text-body-sm font-semibold text-secondary">Deep Shadow Regions</span>
                         <span class="font-body-sm text-[12px] text-on-surface-variant leading-snug">
-                          Cloud cast and steep terrain shadows reduce spectral reflectance, causing confidence degradation below 0.35 threshold.
+                          Cloud cast and steep terrain shadows reduce spectral reflectance, causing confidence
+                          degradation below 0.35 threshold.
                         </span>
                       </div>
                     </div>
@@ -601,16 +826,20 @@
                       <div class="flex flex-col">
                         <span class="font-body-sm text-body-sm font-semibold text-secondary">Low-GSD Tile Drift</span>
                         <span class="font-body-sm text-[12px] text-on-surface-variant leading-snug">
-                          Imagery with GSD &gt; 0.45 m/pixel lacks sub-meter crown border resolution, leading to false-positive canopy area inflation (~6.2%).
+                          Imagery with GSD &gt; 0.45 m/pixel lacks sub-meter crown border resolution, leading to
+                          false-positive canopy area inflation (~6.2%).
                         </span>
                       </div>
                     </div>
                   </div>
                   <!-- Transparency Footer Verification Note -->
                   <div class="pt-2 mt-1">
-                    <div class="flex items-start gap-2 p-2 rounded bg-surface-container-high/50 font-label-data-sm text-[11px] text-outline leading-tight">
-                      <span class="material-symbols-outlined text-on-surface-variant text-[14px] shrink-0 mt-0.5">verified_user</span>
-                      <span><strong>Recommendation:</strong> Verify boundary zones with ground-truth plot sampling. Kolkata Hackathon Evaluation Build.</span>
+                    <div
+                      class="flex items-start gap-2 p-2 rounded bg-surface-container-high/50 font-label-data-sm text-[11px] text-outline leading-tight">
+                      <span
+                        class="material-symbols-outlined text-on-surface-variant text-[14px] shrink-0 mt-0.5">verified_user</span>
+                      <span><strong>Recommendation:</strong> Verify boundary zones with ground-truth plot sampling.
+                        Kolkata Hackathon Evaluation Build.</span>
                     </div>
                   </div>
                 </div>
@@ -630,6 +859,30 @@
     // (window.FLORA_API_BASE set in a small inline script before this file loads)
     // overrides this to point at the separately-deployed backend.
     const API_BASE = window.FLORA_API_BASE || '';
+
+    // Non-blocking toast notification (replaces jarring alert() popups).
+    function showToast(message, type = 'info', durationMs = 4000) {
+      const stack = document.getElementById('flora-toast-stack');
+      const el = document.createElement('div');
+      el.className = `flora-toast ${type === 'error' ? 'flora-toast-error' : type === 'success' ? 'flora-toast-success' : ''}`;
+      el.textContent = message;
+      stack.appendChild(el);
+      requestAnimationFrame(() => el.classList.add('flora-toast-visible'));
+      setTimeout(() => {
+        el.classList.remove('flora-toast-visible');
+        setTimeout(() => el.remove(), 250);
+      }, durationMs);
+    }
+
+    // Briefly pulse-highlight an element whose value just changed, so stage
+    // transitions (loading -> results) read as an update rather than a silent jump.
+    function flashUpdate(el) {
+      if (!el) return;
+      el.classList.remove('flora-flash-update');
+      // Force reflow so the animation restarts if it's still finishing from a previous update.
+      void el.offsetWidth;
+      el.classList.add('flora-flash-update');
+    }
 
     let activeSample = 'Sundarbans_Sector_4B.png';
     let uploadedFileObj = null;
@@ -670,7 +923,7 @@
       uploadedFileObj = file;
       activeSample = null;
       document.getElementById('loaded-tile-name').innerText = file.name;
-      document.getElementById('loaded-tile-info').innerText = `${(file.size / (1024*1024)).toFixed(2)} MB • Custom Orthomosaic Ingestion`;
+      document.getElementById('loaded-tile-info').innerText = `${(file.size / (1024 * 1024)).toFixed(2)} MB • Custom Orthomosaic Ingestion`;
       document.getElementById('header-sector-name').innerText = file.name;
       runCanopyDetection();
     }
@@ -709,9 +962,12 @@
       }
     }
 
-    // Execute DeepForest analysis against backend
+    // Execute spectral crown-detection analysis against the backend
     async function runCanopyDetection() {
-      loadingSpinner.classList.remove('hidden');
+      // Fade the loading overlay in (see CSS transition on #loading-spinner) instead
+      // of an instant hidden-class pop, so the upload -> analyzing stage change reads
+      // as a smooth transition.
+      loadingSpinner.classList.remove('opacity-0', 'pointer-events-none');
       document.getElementById('analyze-action-text').innerText = 'Segmenting Crowns...';
       document.getElementById('analyze-action-icon').classList.add('animate-spin');
 
@@ -736,13 +992,16 @@
         if (result.success) {
           currentInferenceResponse = result;
           renderTelemetryMetrics(result);
+          showToast(`Analysis complete - ${result.metrics.tree_count} crowns detected`, 'success');
         } else {
-          alert('Inference error: ' + (result.detail || 'Error'));
+          showToast('Inference error: ' + (result.detail || 'Unknown error'), 'error');
         }
       } catch (err) {
         console.error('Detection request failed:', err);
+        showToast('Could not reach the analysis backend. Check your connection and try again.', 'error');
       } finally {
-        loadingSpinner.classList.add('hidden');
+        // Fade the overlay back out (see analyzing -> results stage transition).
+        loadingSpinner.classList.add('opacity-0', 'pointer-events-none');
         document.getElementById('analyze-action-text').innerText = 'Analyze Tree Canopy';
         document.getElementById('analyze-action-icon').classList.remove('animate-spin');
       }
@@ -751,33 +1010,48 @@
     // Update UI telemetry cards & annotated image preview
     function renderTelemetryMetrics(data) {
       const m = data.metrics;
-      
-      // Update image
-      orthoImg.src = data.annotated_image_data;
-      
+
+      // Crossfade the annotated image in rather than popping the new src in instantly:
+      // fade the current frame out, swap the source once it's transparent, then fade
+      // the new (already-decoded) frame back in on load.
+      orthoImg.classList.add('opacity-0');
+      const swapImage = () => {
+        orthoImg.src = data.annotated_image_data;
+        orthoImg.onload = () => orthoImg.classList.remove('opacity-0');
+      };
+      setTimeout(swapImage, 180);
+
       // Update HUD telemetry
       document.getElementById('engine-latency-val').innerText = `${data.inference_time_ms}ms`;
-      document.getElementById('l2-engine-status').innerText = data.model_source.includes('DeepForest') ? 'DEEPFOREST' : 'SPECTRAL';
+      document.getElementById('l2-engine-status').innerText = 'SPECTRAL';
       document.getElementById('hud-gpu-status').innerText = `${data.model_source} (${data.inference_time_ms}ms)`;
       document.getElementById('hud-detected-crowns').innerText = `Detected: ${m.tree_count.toLocaleString()} crowns`;
       document.getElementById('hud-conf-status').innerText = `Conf: ≥${parseFloat(confSlider.value).toFixed(2)}`;
 
-      // Update 3 KPI Cards
-      document.getElementById('display-tree-count').innerText = m.tree_count.toLocaleString();
+      // Update 3 KPI Cards (pulse-highlighted so a re-run visibly registers as an update)
+      const treeCountEl = document.getElementById('display-tree-count');
+      treeCountEl.innerText = m.tree_count.toLocaleString();
+      flashUpdate(treeCountEl);
       document.getElementById('display-delta-badge').innerText = `Active Plot (${m.tree_count})`;
       document.getElementById('display-trees-per-ha').innerText = `${m.trees_per_ha} trees/ha`;
 
-      document.getElementById('display-canopy-m2').innerText = m.total_canopy_m2.toLocaleString();
+      const canopyM2El = document.getElementById('display-canopy-m2');
+      canopyM2El.innerText = m.total_canopy_m2.toLocaleString();
+      flashUpdate(canopyM2El);
       document.getElementById('display-canopy-ha').innerText = `m² (${m.total_canopy_ha} ha)`;
       document.getElementById('display-gsd-val').innerText = `GSD ${m.gsd} m/px`;
 
-      document.getElementById('display-cover-pct').innerText = `${m.canopy_cover_percentage}%`;
+      const coverPctEl = document.getElementById('display-cover-pct');
+      coverPctEl.innerText = `${m.canopy_cover_percentage}%`;
+      flashUpdate(coverPctEl);
       document.getElementById('display-gauge-text').innerText = `${Math.round(m.canopy_cover_percentage)}%`;
       document.getElementById('svg-gauge-circle').setAttribute('stroke-dasharray', `${m.canopy_cover_percentage}, 100`);
       document.getElementById('display-class-badge').innerText = m.canopy_density_class.split('(')[0].trim();
 
       // Update Carbon Sequestration
-      document.getElementById('display-carbon-sequestration').innerHTML = `${m.inferred_co2e_tons.toLocaleString()} <span class="text-body-sm font-normal text-on-surface-variant">t CO₂e</span>`;
+      const carbonEl = document.getElementById('display-carbon-sequestration');
+      carbonEl.innerHTML = `${m.inferred_co2e_tons.toLocaleString()} <span class="text-body-sm font-normal text-on-surface-variant">t CO₂e</span>`;
+      flashUpdate(carbonEl);
       document.getElementById('display-confidence-variance').innerText = `Dry Biomass: ${m.estimated_agb_tons} t`;
 
       // Update FOV & HUD scale
@@ -820,12 +1094,12 @@
     }
 
     document.getElementById('quick-export-btn').addEventListener('click', () => {
-      if (!currentInferenceResponse) return alert('Please analyze an image first.');
+      if (!currentInferenceResponse) return showToast('Please analyze an image first.', 'error');
       triggerDownload(JSON.stringify(currentInferenceResponse.geojson, null, 2), `Flora_Carbon_Telemetry_${Date.now()}.geojson`, 'application/json');
     });
 
     document.getElementById('btn-export-action').addEventListener('click', () => {
-      if (!currentInferenceResponse) return alert('Please analyze an image first.');
+      if (!currentInferenceResponse) return showToast('Please analyze an image first.', 'error');
       const wantGeoJSON = confirm('Click OK to download GeoJSON (for GIS / QGIS), or Cancel to download CSV Table.');
       if (wantGeoJSON) {
         triggerDownload(JSON.stringify(currentInferenceResponse.geojson, null, 2), `Flora_Carbon_Canopy_${Date.now()}.geojson`, 'application/json');
@@ -838,4 +1112,5 @@
     loadSampleOptions().then(() => runCanopyDetection());
   </script>
 </body>
+
 </html>
