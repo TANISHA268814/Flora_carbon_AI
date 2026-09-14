@@ -1,15 +1,16 @@
 """
 Flora Carbon AI - Core Detection & Telemetry Engine
-DeepForest Tree Crown Detection, Canopy Area & Carbon Sequestration Modeling
+Classical spectral (Excess Green Index) tree crown detection, canopy area &
+carbon sequestration modeling. Runs on OpenCV/NumPy only - no ML model/weights,
+so the whole engine fits comfortably in a 512MB free-tier container.
 """
 
 import os
 import io
 import csv
 import time
-import json
 import logging
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Tuple
 import numpy as np
 import cv2
 from PIL import Image
@@ -18,68 +19,11 @@ from PIL import Image
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("FloraDetector")
 
-# Global model cache
-_MODEL = None
-_MODEL_LOAD_ERROR = None
-_MODEL_LOCK = None
-
-# Free-tier CPU deployments (HF Spaces "cpu-basic": 2 vCPU) have no GPU and limited
-# RAM/time budgets. Cap inference resolution so a large orthomosaic tile can't blow
-# past the request timeout or the container's memory ceiling. Boxes are rescaled back
-# to the original image's coordinate space after detection, so output precision on
-# the full-resolution image/metrics is unaffected.
+# Cap inference resolution so a large orthomosaic tile can't blow past the request
+# timeout or the container's memory ceiling. Boxes are rescaled back to the original
+# image's coordinate space after detection, so output precision on the full-resolution
+# image/metrics is unaffected.
 MAX_INFERENCE_DIM = 1600
-
-
-def _get_lock():
-    global _MODEL_LOCK
-    if _MODEL_LOCK is None:
-        import threading
-        _MODEL_LOCK = threading.Lock()
-    return _MODEL_LOCK
-
-
-def get_deepforest_model():
-    """Lazily load and cache the pre-trained DeepForest model (thread-safe)."""
-    global _MODEL, _MODEL_LOAD_ERROR
-    if _MODEL is not None:
-        return _MODEL
-
-    with _get_lock():
-        if _MODEL is not None:  # re-check after acquiring lock (another thread may have loaded it)
-            return _MODEL
-        try:
-            import torch
-            from deepforest import main
-
-            # Free-tier hosts commonly expose 2 vCPUs; let torch/OpenCV use them without
-            # oversubscribing threads across each other, which slows down single-request inference.
-            cpu_count = max(1, os.cpu_count() or 1)
-            torch.set_num_threads(cpu_count)
-            cv2.setNumThreads(cpu_count)
-
-            logger.info("Initializing DeepForest pre-trained model...")
-            model = main.deepforest()
-            # In DeepForest 2.1.0, pre-trained weights are loaded during instantiation
-            if hasattr(model, "use_release"):
-                try:
-                    model.use_release()
-                except Exception:
-                    pass
-            # Explicitly pin to CPU: free-tier hosts have no GPU, and some DeepForest/
-            # Lightning versions otherwise probe for CUDA and slow down first inference.
-            try:
-                model.model.to("cpu")
-                model.model.eval()
-            except Exception:
-                pass
-            _MODEL = model
-            logger.info("DeepForest model loaded successfully.")
-            return _MODEL
-        except Exception as e:
-            _MODEL_LOAD_ERROR = str(e)
-            logger.warning(f"Could not load release weights via DeepForest: {e}. Fallback heuristics ready.")
-            return None
 
 
 def _resize_for_inference(image_rgb: np.ndarray) -> Tuple[np.ndarray, float]:
@@ -310,11 +254,10 @@ def draw_styled_annotations(
     return annotated
 
 
-def fallback_crown_detector(image_rgb: np.ndarray, confidence_threshold: float = 0.40) -> List[Dict[str, Any]]:
+def detect_tree_crowns(image_rgb: np.ndarray, confidence_threshold: float = 0.40) -> List[Dict[str, Any]]:
     """
-    High-accuracy multi-scale spectral canopy detector used as an instant offline/fallback engine
-    when DeepForest weights are downloading or for ultra-fast local validation.
-    Extracts tree crown local maxima and spectral NDVI / Excess Green indices.
+    Classical multi-scale spectral canopy detector - no ML model/weights required.
+    Extracts tree crown contours via adaptive thresholding of the Excess Green Index.
     """
     h, w = image_rgb.shape[:2]
     # Excess Green Index (ExG = 2G - R - B)
@@ -401,7 +344,7 @@ def generate_geojson(boxes: List[Dict[str, Any]], metrics: Dict[str, Any], origi
                 "height_px": round(ymax - ymin, 1),
                 "canopy_area_m2": round((xmax - xmin) * (ymax - ymin) * (gsd ** 2), 2),
                 "species_class": "Mangrove / Tropical Forest",
-                "detected_by": "Flora Carbon AI DeepForest v1.4"
+                "detected_by": "Flora Carbon AI Spectral Engine v1.4"
             }
         }
         features.append(feature)
@@ -410,7 +353,7 @@ def generate_geojson(boxes: List[Dict[str, Any]], metrics: Dict[str, Any], origi
         "type": "FeatureCollection",
         "metadata": {
             "generated_by": "Flora Carbon AI",
-            "model": "DeepForest v2.1 / Retinanet Tree Crown",
+            "model": "Excess Green Index + Contour Segmentation",
             "total_trees": metrics.get("tree_count", 0),
             "total_canopy_m2": metrics.get("total_canopy_m2", 0.0),
             "canopy_cover_percentage": metrics.get("canopy_cover_percentage", 0.0),
@@ -465,37 +408,12 @@ def analyze_tree_canopy(
 
     h, w = image_rgb.shape[:2]
     
-    # 2. Run Detection (DeepForest with fallback), on a resolution-capped copy so
-    # large orthomosaic tiles stay within free-tier CPU/memory/time budgets.
+    # 2. Run Detection on a resolution-capped copy so large orthomosaic tiles stay
+    # within free-tier CPU/memory/time budgets.
     inference_rgb, inference_scale = _resize_for_inference(image_rgb)
-    model = get_deepforest_model()
-    boxes = []
-    model_source = "DeepForest Pre-trained (RetinaNet ResNet-50)"
-
-    if model is not None:
-        try:
-            # DeepForest expects float or uint8 RGB numpy array
-            df_preds = model.predict_image(image=inference_rgb, return_plot=False)
-            if df_preds is not None and not df_preds.empty:
-                # Filter by confidence score
-                filtered = df_preds[df_preds["score"] >= confidence_threshold]
-                for _, row in filtered.iterrows():
-                    boxes.append({
-                        "xmin": float(row["xmin"]),
-                        "ymin": float(row["ymin"]),
-                        "xmax": float(row["xmax"]),
-                        "ymax": float(row["ymax"]),
-                        "score": round(float(row["score"]), 3),
-                        "label": str(row.get("label", "Tree"))
-                    })
-            logger.info(f"DeepForest detected {len(boxes)} crowns (threshold >= {confidence_threshold}).")
-        except Exception as e:
-            logger.warning(f"DeepForest inference exception: {e}. Utilizing fallback spectral engine.")
-            boxes = fallback_crown_detector(inference_rgb, confidence_threshold)
-            model_source = "Spectral Orthomosaic Segmenter (Local Engine)"
-    else:
-        boxes = fallback_crown_detector(inference_rgb, confidence_threshold)
-        model_source = "Spectral Orthomosaic Segmenter (Local Engine)"
+    model_source = "Spectral Orthomosaic Segmenter (Excess Green Index + Contour Engine)"
+    boxes = detect_tree_crowns(inference_rgb, confidence_threshold)
+    logger.info(f"Detected {len(boxes)} crowns (threshold >= {confidence_threshold}).")
 
     # Rescale detections back to the original (un-downscaled) image coordinate space.
     if inference_scale != 1.0:

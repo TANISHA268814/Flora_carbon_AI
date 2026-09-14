@@ -2,7 +2,7 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies for OpenCV / torch
+# Install system dependencies for OpenCV
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libgl1 \
@@ -10,9 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install. requirements.txt itself pins torch/torchvision to the
-# CPU-only wheel index via --extra-index-url (NOT --index-url, which would replace PyPI
-# entirely and break resolution of transitive deps like typing-extensions/flit_core).
+# Copy requirements and install. No ML framework (torch/deepforest) here by design -
+# detector.py runs a classical OpenCV-only engine so the whole image/container fits
+# comfortably inside a 512MB free-tier RAM limit (e.g. Render's free Web Service tier).
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -22,7 +22,7 @@ COPY . .
 # Generate sample benchmark images if not present
 RUN python create_samples.py
 
-# Expose port (7860 is standard for Hugging Face Spaces & Gradio;
+# Expose port (7860 is standard for Hugging Face Spaces;
 # platforms like Cloud Run/Render/Railway override this via $PORT at runtime)
 EXPOSE 7860
 ENV PORT=7860

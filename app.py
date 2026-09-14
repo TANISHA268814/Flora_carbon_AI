@@ -1,6 +1,6 @@
 """
-Flora Carbon AI - Hackathon Web Application & Telemetry Dashboard
-FastAPI + Interactive Google Stitch UI + Gradio Mount + DeepForest Vision Engine
+Flora Carbon AI - Web Application & Telemetry Dashboard
+FastAPI + Interactive Dashboard UI + Classical Spectral Vision Engine
 """
 
 import os
@@ -9,22 +9,19 @@ import json
 import base64
 import time
 import logging
-import threading
 from typing import Optional, List
 import numpy as np
 import cv2
 from PIL import Image, UnidentifiedImageError
 
-import fastapi
 from fastapi import FastAPI, UploadFile, File, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import gradio as gr
 
-from detector import analyze_tree_canopy, get_deepforest_model
+from detector import analyze_tree_canopy
 
 logger = logging.getLogger("FloraApp")
 logging.basicConfig(level=logging.INFO)
@@ -39,12 +36,6 @@ os.makedirs(STATIC_DIR, exist_ok=True)
 # Max accepted upload size. Free-tier hosts have limited RAM; a very large raw file
 # (e.g. an uncompressed multi-band GeoTIFF) can OOM the container during decode.
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB
-
-# Prewarm the DeepForest model off the import path, in a background thread, so the
-# process can start serving / and health checks immediately instead of blocking on a
-# multi-second (or first-run, network-downloading) model load. Requests that arrive
-# before the model finishes loading transparently use the fallback detector.
-threading.Thread(target=get_deepforest_model, daemon=True).start()
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -132,7 +123,7 @@ async def api_analyze(
 ):
     """
     Main detection analysis endpoint:
-    Accepts uploaded files or sample image filenames, executes DeepForest inference,
+    Accepts uploaded files or sample image filenames, executes spectral crown detection,
     computes carbon/canopy metrics, and returns annotations and telemetry data.
     """
     # Clamp user-supplied sliders to sane bounds regardless of what the client sends.
@@ -213,94 +204,6 @@ async def api_analyze(
     except Exception as e:
         logger.exception("Error during analysis")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-# Gradio Interface for Standalone / Programmatic Hackathon Testing
-def gradio_predict(image, confidence_threshold, gsd_meters_per_pixel, show_boxes, show_heatmap, show_centroids):
-    if image is None:
-        return None, "Please upload an image.", "0", "0 m²", "0%", "N/A"
-
-    try:
-        result = analyze_tree_canopy(
-            image_input=image,
-            confidence_threshold=confidence_threshold,
-            gsd_meters_per_pixel=gsd_meters_per_pixel,
-            show_boxes=show_boxes,
-            show_heatmap=show_heatmap,
-            show_centroids=show_centroids
-        )
-    except Exception as e:
-        logger.exception("Gradio analysis failed")
-        return None, f"⚠️ Analysis failed: {e}", "0", "0 m²", "0%", "N/A"
-    
-    m = result["metrics"]
-    stats_markdown = f"""
-### 🌲 Telemetry Summary
-- **Tree Crowns Count:** {m['tree_count']}
-- **Total Canopy Footprint:** {m['total_canopy_m2']:,} m² ({m['total_canopy_ha']} ha)
-- **Canopy Cover Index:** {m['canopy_cover_percentage']}% ({m['canopy_density_class']})
-- **Above-Ground Biomass (AGB):** {m['estimated_agb_tons']} t
-- **Inferred Carbon Sequestration:** {m['inferred_co2e_tons']} t CO₂e
-- **Mean Crown Diameter:** {m['mean_crown_diameter_m']} m
-- **Estimated Density:** {m['trees_per_ha']} trees/ha
-- **Inference Latency:** {result['inference_time_ms']} ms ({result['model_source']})
-"""
-    return (
-        result["annotated_image"],
-        stats_markdown,
-        f"{m['tree_count']}",
-        f"{m['total_canopy_m2']:,} m²",
-        f"{m['canopy_cover_percentage']}%",
-        f"{m['inferred_co2e_tons']} t CO₂e"
-    )
-
-# Build Gradio UI
-with gr.Blocks(title="Flora Carbon AI - Canopy Detect v1.4", theme=gr.themes.Soft(primary_hue="emerald")) as gradio_app:
-    gr.Markdown("""
-# 🌲 Flora Carbon AI — Canopy Vision & Carbon Telemetry
-**Autonomous DeepForest Tree Crown Detection, Canopy Cover Analysis & Model Transparency Audits**
-""")
-    with gr.Row():
-        with gr.Column(scale=4):
-            input_img = gr.Image(label="Orthomosaic / Drone / Satellite Image", type="numpy")
-            conf_slider = gr.Slider(minimum=0.10, maximum=0.90, value=0.40, step=0.05, label="Confidence Threshold")
-            gsd_input = gr.Number(value=0.20, label="Ground Sampling Distance (GSD) m/pixel", precision=2)
-            with gr.Row():
-                chk_box = gr.Checkbox(value=True, label="Bounding Boxes")
-                chk_heat = gr.Checkbox(value=False, label="Heatmap Gradient")
-                chk_cent = gr.Checkbox(value=True, label="Crown Centroids")
-            btn_run = gr.Button("Analyze Tree Canopy", variant="primary")
-            
-            sample_files = [os.path.join(SAMPLE_DIR, f) for f in os.listdir(SAMPLE_DIR) if f.endswith((".png", ".jpg"))]
-            if sample_files:
-                gr.Examples(examples=sample_files, inputs=input_img, label="Quick Benchmark Examples")
-
-        with gr.Column(scale=6):
-            output_img = gr.Image(label="Annotated Canopy Orthomosaic", type="numpy")
-            with gr.Row():
-                kpi_count = gr.Textbox(label="Total Tree Crowns", interactive=False)
-                kpi_area = gr.Textbox(label="Total Canopy Area", interactive=False)
-                kpi_cover = gr.Textbox(label="Canopy Cover %", interactive=False)
-                kpi_carbon = gr.Textbox(label="Inferred CO₂e", interactive=False)
-            output_details = gr.Markdown(label="Telemetry Breakdown")
-
-    with gr.Accordion("⚠️ Honesty & Model Limitations Report (Failure Modes)", open=True):
-        gr.Markdown("""
-### Audited Machine-Learning Constraints for Aerial Remote Sensing
-1. **Dense Canopy Overlaps**: Merged interlocking crowns in mature rainforest canopies may be under-segmented by 8–14% without LiDAR height profiling.
-2. **Deep Shadow Regions**: Cloud cast and steep terrain shadows reduce spectral reflectance, causing confidence degradation below 0.35 threshold.
-3. **Resolution Drop & Low-GSD Drift**: Imagery with GSD > 0.45 m/pixel lacks sub-meter crown border resolution, leading to false-positive canopy area inflation (~6.2%).
-*Recommendation: Verify boundary zones with ground-truth plot sampling. Kolkata Hackathon Evaluation Build.*
-""")
-
-    btn_run.click(
-        fn=gradio_predict,
-        inputs=[input_img, conf_slider, gsd_input, chk_box, chk_heat, chk_cent],
-        outputs=[output_img, output_details, kpi_count, kpi_area, kpi_cover, kpi_carbon]
-    )
-
-# Mount Gradio onto FastAPI
-app = gr.mount_gradio_app(app, gradio_app, path="/gradio")
 
 
 # Full Stitch Interactive Dashboard Endpoint
