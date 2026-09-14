@@ -9,15 +9,17 @@ import json
 import base64
 import time
 import logging
+import threading
 from typing import Optional, List
 import numpy as np
 import cv2
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 import fastapi
 from fastapi import FastAPI, UploadFile, File, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.concurrency import run_in_threadpool
 import uvicorn
 import gradio as gr
 
@@ -33,11 +35,15 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 os.makedirs(SAMPLE_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
 
-# Pre-warm model in background
-try:
-    get_deepforest_model()
-except Exception as e:
-    logger.warning(f"Initial model prewarm warning: {e}")
+# Max accepted upload size. Free-tier hosts have limited RAM; a very large raw file
+# (e.g. an uncompressed multi-band GeoTIFF) can OOM the container during decode.
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB
+
+# Prewarm the DeepForest model off the import path, in a background thread, so the
+# process can start serving / and health checks immediately instead of blocking on a
+# multi-second (or first-run, network-downloading) model load. Requests that arrive
+# before the model finishes loading transparently use the fallback detector.
+threading.Thread(target=get_deepforest_model, daemon=True).start()
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -48,6 +54,12 @@ app = FastAPI(
 
 # Mount sample images
 app.mount("/sample_images", StaticFiles(directory=SAMPLE_DIR), name="sample_images")
+
+
+@app.get("/health")
+async def health_check():
+    """Lightweight liveness probe for the hosting platform - never blocks on model load."""
+    return {"status": "ok"}
 
 
 @app.get("/api/samples")
@@ -113,20 +125,37 @@ async def api_analyze(
     Accepts uploaded files or sample image filenames, executes DeepForest inference,
     computes carbon/canopy metrics, and returns annotations and telemetry data.
     """
+    # Clamp user-supplied sliders to sane bounds regardless of what the client sends.
+    confidence = min(0.90, max(0.10, confidence))
+    gsd = min(5.0, max(0.01, gsd))
+
     try:
         if file is not None and file.filename:
             contents = await file.read()
-            pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
+            if len(contents) > MAX_UPLOAD_BYTES:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"File exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)}MB upload limit."
+                )
+            try:
+                pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
+            except UnidentifiedImageError:
+                raise HTTPException(status_code=400, detail="Uploaded file is not a valid image.")
             filename = file.filename
         elif sample_filename:
-            sample_path = os.path.join(SAMPLE_DIR, sample_filename)
+            # Prevent path traversal via a crafted sample_filename (e.g. "../../etc/passwd").
+            safe_name = os.path.basename(sample_filename)
+            sample_path = os.path.join(SAMPLE_DIR, safe_name)
             if not os.path.exists(sample_path):
                 raise HTTPException(status_code=404, detail="Sample image not found")
             pil_img = Image.open(sample_path).convert("RGB")
-            filename = sample_filename
+            filename = safe_name
         else:
             # Fallback to first available sample
-            samples = os.listdir(SAMPLE_DIR)
+            samples = sorted(
+                f for f in os.listdir(SAMPLE_DIR)
+                if f.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff"))
+            )
             if not samples:
                 raise HTTPException(status_code=400, detail="No image provided and no samples found")
             sample_path = os.path.join(SAMPLE_DIR, samples[0])
@@ -134,9 +163,12 @@ async def api_analyze(
             filename = samples[0]
 
         img_np = np.array(pil_img)
-        
-        # Run detection engine
-        result = analyze_tree_canopy(
+
+        # Run the CPU-bound detection engine in a worker thread so one heavy request
+        # (e.g. a large orthomosaic) doesn't stall the event loop for every other
+        # concurrent user - important on a single-process free-tier deployment.
+        result = await run_in_threadpool(
+            analyze_tree_canopy,
             image_input=img_np,
             confidence_threshold=confidence,
             gsd_meters_per_pixel=gsd,
@@ -166,6 +198,8 @@ async def api_analyze(
         }
         return JSONResponse(content=response_payload)
 
+    except HTTPException:
+        raise  # preserve intended status codes (400/404/413) instead of flattening to 500
     except Exception as e:
         logger.exception("Error during analysis")
         raise HTTPException(status_code=500, detail=str(e))
@@ -175,15 +209,19 @@ async def api_analyze(
 def gradio_predict(image, confidence_threshold, gsd_meters_per_pixel, show_boxes, show_heatmap, show_centroids):
     if image is None:
         return None, "Please upload an image.", "0", "0 m²", "0%", "N/A"
-    
-    result = analyze_tree_canopy(
-        image_input=image,
-        confidence_threshold=confidence_threshold,
-        gsd_meters_per_pixel=gsd_meters_per_pixel,
-        show_boxes=show_boxes,
-        show_heatmap=show_heatmap,
-        show_centroids=show_centroids
-    )
+
+    try:
+        result = analyze_tree_canopy(
+            image_input=image,
+            confidence_threshold=confidence_threshold,
+            gsd_meters_per_pixel=gsd_meters_per_pixel,
+            show_boxes=show_boxes,
+            show_heatmap=show_heatmap,
+            show_centroids=show_centroids
+        )
+    except Exception as e:
+        logger.exception("Gradio analysis failed")
+        return None, f"⚠️ Analysis failed: {e}", "0", "0 m²", "0%", "N/A"
     
     m = result["metrics"]
     stats_markdown = f"""
