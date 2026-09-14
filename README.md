@@ -1,3 +1,13 @@
+---
+title: Flora Carbon AI
+emoji: 🌲
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🌲 Flora Carbon AI — Tree Crown Detection & Carbon Telemetry Platform
 
 > **Autonomous Aerial Orthomosaic Tree Crown Detection, Canopy Cover Analysis & Model Transparency Audits for Climate-Tech & Carbon Verification.**
