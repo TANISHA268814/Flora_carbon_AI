@@ -15,6 +15,8 @@ import numpy as np
 import cv2
 from PIL import Image
 
+import hardware
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("FloraDetector")
@@ -22,8 +24,9 @@ logger = logging.getLogger("FloraDetector")
 # Cap inference resolution so a large orthomosaic tile can't blow past the request
 # timeout or the container's memory ceiling. Boxes are rescaled back to the original
 # image's coordinate space after detection, so output precision on the full-resolution
-# image/metrics is unaffected.
-MAX_INFERENCE_DIM = 1600
+# image/metrics is unaffected. Sourced from hardware.py so this scales with the host
+# machine's RAM instead of a single fixed constant (see hardware.py tier table).
+MAX_INFERENCE_DIM = hardware.CONFIG["max_inference_dim"]
 
 
 def _resize_for_inference(image_rgb: np.ndarray) -> Tuple[np.ndarray, float]:
@@ -302,10 +305,13 @@ def _apply_roi_mask(image_rgb: np.ndarray, roi_polygon: List[List[float]]) -> np
     return masked
 
 
-def detect_tree_crowns(image_rgb: np.ndarray, confidence_threshold: float = 0.40) -> List[Dict[str, Any]]:
+def _extract_scored_crowns(image_rgb: np.ndarray) -> List[Dict[str, Any]]:
     """
-    Classical multi-scale spectral canopy detector - no ML model/weights required.
-    Extracts tree crown contours via adaptive thresholding of the Excess Green Index.
+    Runs the (expensive, one-time) contour extraction over the Excess Green Index
+    and returns every geometrically-plausible crown candidate with its score,
+    unfiltered by confidence threshold. Both detect_tree_crowns() and
+    detect_tree_crowns_multi() build on this single pass so a threshold sweep
+    across N values costs the same as one detection, not N.
     """
     h, w = image_rgb.shape[:2]
     # Excess Green Index (ExG = 2G - R - B)
@@ -313,17 +319,17 @@ def detect_tree_crowns(image_rgb: np.ndarray, confidence_threshold: float = 0.40
     r, g, b = img_f[:, :, 0], img_f[:, :, 1], img_f[:, :, 2]
     exg = (2.0 * g - r - b)
     exg_norm = cv2.normalize(exg, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    
+
     # Adaptive thresholding and morphological crown filtering
     blurred = cv2.GaussianBlur(exg_norm, (11, 11), 0)
     _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    
+
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    boxes = []
+
+    candidates = []
     min_area = max(30, int((h * w) * 0.00008))
     max_area = int((h * w) * 0.15)
-    
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if min_area <= area <= max_area:
@@ -332,23 +338,93 @@ def detect_tree_crowns(image_rgb: np.ndarray, confidence_threshold: float = 0.40
             aspect = float(bw) / max(1, bh)
             if 0.35 <= aspect <= 2.8:
                 # Score based on greenness intensity and compactness
-                mask_roi = thresh[y:y+bh, x:x+bw]
                 compactness = float(area) / max(1.0, float(bw * bh))
                 score = min(0.98, max(0.42, 0.50 + compactness * 0.45))
-                
-                if score >= confidence_threshold:
-                    boxes.append({
-                        "xmin": float(x),
-                        "ymin": float(y),
-                        "xmax": float(x + bw),
-                        "ymax": float(y + bh),
-                        "score": round(score, 3),
-                        "label": "Tree"
-                    })
-                    
-    # Sort boxes by score descending
+                candidates.append({
+                    "xmin": float(x),
+                    "ymin": float(y),
+                    "xmax": float(x + bw),
+                    "ymax": float(y + bh),
+                    "score": round(score, 3),
+                    "label": "Tree"
+                })
+
+    return candidates
+
+
+def detect_tree_crowns(image_rgb: np.ndarray, confidence_threshold: float = 0.40) -> List[Dict[str, Any]]:
+    """
+    Classical multi-scale spectral canopy detector - no ML model/weights required.
+    Extracts tree crown contours via adaptive thresholding of the Excess Green Index.
+    """
+    candidates = _extract_scored_crowns(image_rgb)
+    boxes = [b for b in candidates if b["score"] >= confidence_threshold]
     boxes.sort(key=lambda x: x["score"], reverse=True)
     return boxes
+
+
+def detect_tree_crowns_multi(image_rgb: np.ndarray, thresholds: List[float]) -> Dict[float, int]:
+    """
+    Threshold sensitivity sweep: runs contour extraction ONCE, then buckets the
+    resulting crown count at each requested confidence threshold. Used by
+    /api/sensitivity so sweeping N thresholds costs the same as a single detection
+    pass instead of N full re-detections.
+    """
+    candidates = _extract_scored_crowns(image_rgb)
+    scores = [b["score"] for b in candidates]
+    return {t: sum(1 for s in scores if s >= t) for t in thresholds}
+
+
+def compute_deforestation_risk(cover_pct: float, canopy_loss_m2: float = 0.0, canopy_gain_m2: float = 0.0) -> Dict[str, Any]:
+    """
+    Transparent composite risk score (0-100, higher = more concerning) from real
+    computed metrics only - no learned/opaque model. Two components:
+    - Sparsity component: low current cover is inherently higher-risk (already-degraded site).
+    - Trend component: net canopy loss raises risk, net gain lowers it, scaled relative
+      to the loss magnitude (a big loss on a big site matters more than a small one).
+    """
+    sparsity_component = max(0.0, 100.0 - cover_pct)  # 0% cover -> 100, 100% cover -> 0
+    net_change_m2 = canopy_gain_m2 - canopy_loss_m2
+    denom = max(1.0, canopy_loss_m2 + canopy_gain_m2)
+    # Loss-weighted trend term: net loss pushes risk up, net gain contributes nothing
+    # (a healthy trend shouldn't offset an already-sparse site's base risk).
+    trend_component = max(0.0, -1.0 * (net_change_m2 / denom) * 50.0)
+
+    risk_score = round(max(0.0, min(100.0, sparsity_component * 0.6 + trend_component * 0.8)), 1)
+
+    if risk_score >= 70:
+        band = "High Risk"
+    elif risk_score >= 40:
+        band = "Moderate Risk"
+    elif risk_score >= 15:
+        band = "Low Risk"
+    else:
+        band = "Minimal Risk"
+
+    return {
+        "risk_score": risk_score,
+        "risk_band": band,
+        "formula": "0.6 * (100 - cover_pct) + 0.8 * max(0, -net_change_ratio * 50)"
+    }
+
+
+def generate_world_file(origin_lat: float, origin_lon: float, gsd_meters_per_pixel: float) -> str:
+    """
+    Generates a standard ESRI world file (.pgw/.wld) six-line affine transform,
+    letting the annotated image be dropped straight into QGIS/ArcGIS as a
+    georeferenced raster. Pure math from values already computed - no geo library.
+    """
+    lat_deg_per_pixel = -(gsd_meters_per_pixel / 111320.0)  # negative: image Y increases downward, latitude decreases
+    lon_deg_per_pixel = gsd_meters_per_pixel / (111320.0 * np.cos(np.radians(origin_lat)))
+    lines = [
+        f"{lon_deg_per_pixel:.12f}",  # pixel size in x-direction
+        "0.0",                        # rotation (row)
+        "0.0",                        # rotation (column)
+        f"{lat_deg_per_pixel:.12f}",  # pixel size in y-direction (negative)
+        f"{origin_lon:.12f}",         # x-coordinate of center of upper-left pixel
+        f"{origin_lat:.12f}",         # y-coordinate of center of upper-left pixel
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def generate_geojson(boxes: List[Dict[str, Any]], metrics: Dict[str, Any], origin_lat: float = 21.9497, origin_lon: float = 88.8997) -> Dict[str, Any]:
