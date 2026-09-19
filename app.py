@@ -108,26 +108,38 @@ async def list_sample_images():
                     meta = "Sundarbans Biosphere - Sector 4B • Mangrove Ortho"
                     gsd = 0.20
                     coords = "21°56'58.9\"N 88°53'58.9\"E"
+                    lat, lon = 21.9497, 88.8997
                 elif "Amazon" in f:
                     meta = "Amazon Basin - Acre Sector 12 • Tropical Evergreen"
                     gsd = 0.15
                     coords = "9°58'29.1\"S 67°48'36.4\"W"
+                    lat, lon = -9.9748, -67.8101
                 elif "Temperate" in f:
                     meta = "Pacific Northwest - Plot 7 • Temperate Conifer"
                     gsd = 0.25
                     coords = "45°22'11.3\"N 121°44'02.1\"W"
+                    lat, lon = 45.3698, -121.7339
                 elif "OSBS" in f:
                     meta = "NEON OSBS Site • Florida Longleaf Pine Benchmark"
                     gsd = 0.10
                     coords = "29°41'47.4\"N 81°59'38.4\"W"
+                    lat, lon = 29.6965, -81.9940
                 elif "SOAP" in f:
                     meta = "NEON SOAP Site • Sierra National Forest Benchmark"
                     gsd = 0.10
                     coords = "37°02'01.5\"N 119°15'36.0\"W"
+                    lat, lon = 37.0336, -119.2600
                 else:
                     meta = "UAV Orthomosaic Forest Tile"
                     gsd = 0.20
                     coords = "21.9497° N, 88.8997° E"
+                    lat, lon = 21.9497, 88.8997
+
+                # Real UTM zone/EPSG derived from this sample's actual lat/lon -
+                # not a single fixed value applied to every image regardless of location.
+                utm_zone = int((lon + 180) / 6) + 1
+                epsg = (32600 if lat >= 0 else 32700) + utm_zone
+                hemisphere = "N" if lat >= 0 else "S"
 
                 samples.append({
                     "filename": f,
@@ -136,6 +148,10 @@ async def list_sample_images():
                     "size_mb": size_mb,
                     "recommended_gsd": gsd,
                     "coords": coords,
+                    "lat": lat,
+                    "lon": lon,
+                    "epsg": f"EPSG:{epsg}",
+                    "utm_zone": f"WGS 84 / UTM Zone {utm_zone}{hemisphere}",
                     "url": f"/sample_images/{f}"
                 })
     return {"samples": samples}
@@ -199,7 +215,9 @@ async def api_analyze(
     show_heatmap: bool = Form(False),
     show_centroids: bool = Form(True),
     heatmap_mode: str = Form("density"),
-    roi_geojson: Optional[str] = Form(None)
+    roi_geojson: Optional[str] = Form(None),
+    origin_lat: float = Form(21.9497),
+    origin_lon: float = Form(88.8997)
 ):
     """
     Main detection analysis endpoint:
@@ -231,7 +249,9 @@ async def api_analyze(
                 show_heatmap=show_heatmap,
                 show_centroids=show_centroids,
                 heatmap_mode=heatmap_mode,
-                roi_polygon=roi_polygon
+                roi_polygon=roi_polygon,
+                origin_lat=origin_lat,
+                origin_lon=origin_lon
             )
 
         # Encode annotated image to Base64 JPEG/PNG for instant DOM rendering
@@ -240,7 +260,14 @@ async def api_analyze(
         img_b64 = base64.b64encode(buffer).decode("utf-8")
 
         m = result["metrics"]
-        world_file_text = generate_world_file(21.9497, 88.8997, gsd)
+        world_file_text = generate_world_file(origin_lat, origin_lon, gsd)
+
+        # Real UTM zone/EPSG derived from THIS image's actual origin - not a single
+        # fixed zone applied to every image regardless of where it really is.
+        utm_zone = int((origin_lon + 180) / 6) + 1
+        epsg_code = (32600 if origin_lat >= 0 else 32700) + utm_zone
+        hemisphere = "N" if origin_lat >= 0 else "S"
+        projection_label = f"EPSG:{epsg_code} (WGS 84 / UTM Zone {utm_zone}{hemisphere})"
 
         # Real session logging - powers the analytics dashboard (history, global
         # counters, leaderboard). Never raises into the response on failure.
@@ -267,7 +294,10 @@ async def api_analyze(
             "annotated_image_data": f"data:image/jpeg;base64,{img_b64}",
             "geojson": result["geojson"],
             "csv_text": result["csv_text"],
-            "world_file_text": world_file_text
+            "world_file_text": world_file_text,
+            "projection_label": projection_label,
+            "origin_lat": origin_lat,
+            "origin_lon": origin_lon
         }
         return JSONResponse(content=response_payload)
 
@@ -371,7 +401,9 @@ async def api_report(
     show_heatmap: bool = Form(False),
     show_centroids: bool = Form(True),
     heatmap_mode: str = Form("density"),
-    roi_geojson: Optional[str] = Form(None)
+    roi_geojson: Optional[str] = Form(None),
+    origin_lat: float = Form(21.9497),
+    origin_lon: float = Form(88.8997)
 ):
     """
     Re-runs the same analysis as /api/analyze (stateless - no server-side caching)
@@ -397,7 +429,9 @@ async def api_report(
                 show_heatmap=show_heatmap,
                 show_centroids=show_centroids,
                 heatmap_mode=heatmap_mode,
-                roi_polygon=roi_polygon
+                roi_polygon=roi_polygon,
+                origin_lat=origin_lat,
+                origin_lon=origin_lon
             )
 
         annotated_bgr = cv2.cvtColor(result["annotated_image"], cv2.COLOR_RGB2BGR)

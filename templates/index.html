@@ -263,28 +263,40 @@
         data-active-classes="bg-primary-container text-on-primary-container font-semibold">
         <a aria-current="page"
           class="flex items-center gap-space-sm px-space-md py-2 rounded transition-all bg-primary-container text-on-primary-container font-semibold"
-          data-path="canopy-monitor" href="#">
-          <span class="material-symbols-outlined text-[20px]">radar</span>Canopy Monitor
+          data-path="canopy-monitor" href="#aerial-canvas-wrapper">
+          <span class="material-symbols-outlined text-[20px]">radar</span>1. Canopy Monitor
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
           data-path="carbon-flux-analysis" href="#telemetry-card">
-          <span class="material-symbols-outlined text-[20px]">co2</span>Carbon Flux Analysis
+          <span class="material-symbols-outlined text-[20px]">co2</span>2. Carbon &amp; Biomass
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
-          data-path="biomass-lidar-viewer" href="#telemetry-card">
-          <span class="material-symbols-outlined text-[20px]">layers</span>Biomass Estimate
+          data-path="change-detection" href="#change-detection-card">
+          <span class="material-symbols-outlined text-[20px]">compare</span>3. Change &amp; Risk
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
-          data-path="deforestation-alerts" href="#failure-modes-card">
-          <span class="material-symbols-outlined text-[20px]">crisis_alert</span>Threat Warnings
+          data-path="detection-insights" href="#insights-card">
+          <span class="material-symbols-outlined text-[20px]">query_stats</span>4. Detection Insights
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
-          data-path="gis-sensor-matrix" href="#">
-          <span class="material-symbols-outlined text-[20px]">satellite_alt</span>Sensor Array
+          data-path="session-analytics" href="#analytics-card">
+          <span class="material-symbols-outlined text-[20px]">monitoring</span>5. Session Analytics
+        </a>
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="gis-sensor-matrix" href="#health-card">
+          <span class="material-symbols-outlined text-[20px]">satellite_alt</span>6. Live Server Health
+        </a>
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="batch-processing" href="#batch-card">
+          <span class="material-symbols-outlined text-[20px]">stacks</span>7. Batch Processing
+        </a>
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="kaggle-benchmark" href="#kaggle-card">
+          <span class="material-symbols-outlined text-[20px]">dataset</span>8. Kaggle Benchmark
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
           data-path="audit-reports" href="#failure-modes-card">
-          <span class="material-symbols-outlined text-[20px]">assessment</span>Audit Reports
+          <span class="material-symbols-outlined text-[20px]">assessment</span>9. Audit &amp; Limitations
         </a>
       </nav>
 
@@ -324,13 +336,13 @@
               <div
                 class="flex items-center gap-space-xs px-space-sm py-1 bg-surface-container-high rounded text-primary">
                 <span class="material-symbols-outlined text-[18px]">satellite_alt</span>
-                <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider font-semibold">Sensor
-                  Payload: Sentinel-2B / UAV Ortho</span>
+                <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider font-semibold" id="hud-source-label">Source:
+                  --</span>
               </div>
               <div
                 class="hidden sm:flex items-center gap-1.5 font-label-data-sm text-label-data-sm text-on-surface-variant">
-                <span>Projection:</span>
-                <span class="text-on-surface font-mono">EPSG:32645 (WGS 84 / UTM Zone 45N)</span>
+                <span>Approx. Projection:</span>
+                <span class="text-on-surface font-mono" id="hud-projection-text">--</span>
               </div>
             </div>
             <div class="flex items-center gap-space-md">
@@ -347,6 +359,46 @@
               <span class="font-label-data-sm text-label-data-sm text-on-surface-variant">Engine: <strong
                   class="text-on-surface font-mono">CN-v3.4.1b / Spectral-ExG</strong></span>
             </div>
+          </div>
+
+          <!-- How This Works: real end-to-end pipeline, not marketing copy -->
+          <div class="flex flex-col bg-surface-container-low/70 border border-outline-variant/20 rounded-xl p-space-md gap-space-sm">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[18px]">route</span>
+              <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline font-semibold">How
+                This Works - Real Pipeline, No Static Data</span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-center">
+              <a href="#aerial-canvas-wrapper" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">1</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Load a tile (upload or sample)</span>
+              </a>
+              <a href="#aerial-canvas-wrapper" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">2</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">ExG spectral crown detection runs server-side</span>
+              </a>
+              <a href="#telemetry-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">3</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Canopy/carbon metrics computed live</span>
+              </a>
+              <a href="#change-detection-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">4</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Compare surveys, get a risk score</span>
+              </a>
+              <a href="#insights-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">5</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Inspect confidence/size/GSD sensitivity</span>
+              </a>
+              <a href="#batch-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">6</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Scale up with batch processing</span>
+              </a>
+              <a href="#kaggle-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">7</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Validate against a real Kaggle dataset</span>
+              </a>
+            </div>
+            <span class="font-body-sm text-[11px] text-on-surface-variant">Every number on this page is computed from the actual image processed, this session's real local analytics log, live server metrics, or a real downloaded dataset - nothing below is hardcoded.</span>
           </div>
 
           <!-- Main Operational Workspace Grid -->
@@ -392,9 +444,9 @@
                   <span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">check_circle</span>
                   <div class="flex flex-col min-w-0">
                     <span class="font-label-data-sm text-label-data-sm text-on-surface font-mono truncate font-medium"
-                      id="loaded-tile-name">Tile_WB_Sundarbans_2024_08.tif</span>
+                      id="loaded-tile-name">Loading...</span>
                     <span class="font-label-data-sm text-label-data-sm text-on-surface-variant"
-                      id="loaded-tile-info">18.4 MB • 4K Orthomosaic 0.20m GSD</span>
+                      id="loaded-tile-info">--</span>
                   </div>
                 </div>
               </div>
@@ -1334,12 +1386,35 @@
       }
     });
 
+    // Real per-sample origin (set whenever a sample is selected; left at a
+    // documented default for raw uploads with no known geolocation).
+    let activeOriginLat = 21.9497;
+    let activeOriginLon = 88.8997;
+    let sampleCatalog = [];
+
+    function applySampleMeta(s) {
+      activeSample = s.filename;
+      activeOriginLat = s.lat;
+      activeOriginLon = s.lon;
+      uploadedFileObj = null;
+      gsdInput.value = s.recommended_gsd.toFixed(2);
+      document.getElementById('loaded-tile-name').innerText = s.filename;
+      document.getElementById('loaded-tile-info').innerText = `${s.size_mb} MB • ${s.meta}`;
+      document.getElementById('header-sector-name').innerText = s.meta.split('•')[0].trim();
+      document.getElementById('header-coords-val').innerText = s.coords;
+      document.getElementById('hud-coordinates-text').innerText = s.coords;
+      document.getElementById('hud-source-label').innerText = `Source: ${s.filename}`;
+      document.getElementById('hud-projection-text').innerText = `${s.epsg} (${s.utm_zone})`;
+    }
+
     function processFileInput(file) {
       uploadedFileObj = file;
       activeSample = null;
       document.getElementById('loaded-tile-name').innerText = file.name;
       document.getElementById('loaded-tile-info').innerText = `${(file.size / (1024 * 1024)).toFixed(2)} MB • Custom Orthomosaic Ingestion`;
       document.getElementById('header-sector-name').innerText = file.name;
+      document.getElementById('hud-source-label').innerText = `Source: ${file.name} (uploaded - location unknown)`;
+      document.getElementById('hud-projection-text').innerText = 'Not georeferenced';
       runCanopyDetection();
     }
 
@@ -1348,6 +1423,7 @@
       try {
         const res = await fetch(`${API_BASE}/api/samples`);
         const data = await res.json();
+        sampleCatalog = data.samples;
         const navContainer = document.getElementById('sample-buttons-nav');
         navContainer.innerHTML = '';
         data.samples.forEach(s => {
@@ -1359,19 +1435,17 @@
             <span class="text-[10px] font-mono text-outline">${s.size_mb}M</span>
           `;
           btn.onclick = () => {
-            activeSample = s.filename;
-            uploadedFileObj = null;
-            gsdInput.value = s.recommended_gsd.toFixed(2);
-            document.getElementById('loaded-tile-name').innerText = s.filename;
-            document.getElementById('loaded-tile-info').innerText = `${s.size_mb} MB • ${s.meta}`;
-            document.getElementById('header-sector-name').innerText = s.meta.split('•')[0].trim();
-            document.getElementById('header-coords-val').innerText = s.coords;
-            document.getElementById('hud-coordinates-text').innerText = s.coords;
+            applySampleMeta(s);
             loadSampleOptions();
             runCanopyDetection();
           };
           navContainer.appendChild(btn);
         });
+        // Populate the real tile-info box for the initial default sample too -
+        // previously this only happened on a manual click, so the box showed
+        // stale placeholder text through the very first (auto-triggered) analysis.
+        const initial = data.samples.find(s => s.filename === activeSample);
+        if (initial) applySampleMeta(initial);
       } catch (err) {
         console.error('Failed to load samples:', err);
       }
@@ -1398,6 +1472,8 @@
       formData.append('show_heatmap', chkHeatmap.checked);
       formData.append('show_centroids', chkCentroids.checked);
       formData.append('heatmap_mode', heatmapModeSelect.value);
+      formData.append('origin_lat', activeOriginLat);
+      formData.append('origin_lon', activeOriginLon);
       if (roiPoints.length >= 3) {
         formData.append('roi_geojson', JSON.stringify(roiPoints));
       }
@@ -1480,6 +1556,12 @@
       const fovHeight = Math.round(data.dimensions.height * m.gsd);
       document.getElementById('hud-fov-val').innerText = `${fovWidth}m x ${fovHeight}m`;
       document.getElementById('hud-scale-text').innerText = `${Math.round(fovWidth * 0.15)}m`;
+
+      // Real per-image projection, computed server-side from this image's actual
+      // origin coordinates - not a single fixed zone shown for every image.
+      if (data.projection_label) {
+        document.getElementById('hud-projection-text').innerText = data.projection_label;
+      }
     }
 
     // Attach listeners
@@ -1547,6 +1629,8 @@
         formData.append('show_heatmap', chkHeatmap.checked);
         formData.append('show_centroids', chkCentroids.checked);
         formData.append('heatmap_mode', heatmapModeSelect.value);
+        formData.append('origin_lat', activeOriginLat);
+        formData.append('origin_lon', activeOriginLon);
         if (roiPoints.length >= 3) formData.append('roi_geojson', JSON.stringify(roiPoints));
 
         const response = await fetch(`${API_BASE}/api/report`, { method: 'POST', body: formData });

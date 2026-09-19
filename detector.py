@@ -496,7 +496,9 @@ def analyze_tree_canopy(
     show_heatmap: bool = False,
     show_centroids: bool = True,
     heatmap_mode: str = "density",
-    roi_polygon: Any = None
+    roi_polygon: Any = None,
+    origin_lat: float = 21.9497,
+    origin_lon: float = 88.8997
 ) -> Dict[str, Any]:
     """
     Main entry point for tree crown detection and canopy telemetry.
@@ -575,8 +577,9 @@ def analyze_tree_canopy(
         heatmap_mode=heatmap_mode
     )
     
-    # 5. Generate GeoJSON and CSV Data
-    geojson_data = generate_geojson(boxes, metrics)
+    # 5. Generate GeoJSON and CSV Data - using the real per-sample origin, not a
+    # fixed default, so exports for non-Sundarbans sites aren't mislabeled.
+    geojson_data = generate_geojson(boxes, metrics, origin_lat=origin_lat, origin_lon=origin_lon)
     
     # Generate CSV text (stdlib csv module - avoids pulling in pandas just to serialize rows)
     csv_fieldnames = ["Crown_ID", "Confidence", "X_Min", "Y_Min", "X_Max", "Y_Max", "Width_px", "Height_px", "Area_m2"]
