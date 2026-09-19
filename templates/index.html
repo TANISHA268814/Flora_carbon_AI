@@ -476,6 +476,15 @@
                   <input id="chk-heatmap"
                     class="w-4 h-4 rounded accent-primary bg-surface-container-lowest cursor-pointer" type="checkbox" />
                 </label>
+                <!-- Heatmap Mode (only meaningful when the heatmap toggle above is on) -->
+                <div class="flex items-center justify-between px-2 -mt-1">
+                  <span class="font-label-data-sm text-[11px] text-on-surface-variant">Heatmap Mode</span>
+                  <select id="heatmap-mode-select"
+                    class="bg-surface-container-lowest text-on-surface font-label-data-sm text-[11px] font-mono px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-primary">
+                    <option value="density">Density</option>
+                    <option value="confidence">Confidence (Uncertainty)</option>
+                  </select>
+                </div>
                 <!-- Toggle 3 -->
                 <label
                   class="flex items-center justify-between p-2 rounded bg-surface-container/60 hover:bg-surface-container cursor-pointer transition-all">
@@ -502,6 +511,32 @@
                   <span class="material-symbols-outlined text-[18px] text-primary">ios_share</span>
                   <span>Export GeoJSON / CSV Report</span>
                 </button>
+                <button id="btn-pdf-report-action"
+                  class="w-full flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface py-2 px-space-md rounded font-body-sm text-body-sm font-medium transition-all"
+                  type="button">
+                  <span class="material-symbols-outlined text-[18px] text-primary">picture_as_pdf</span>
+                  <span id="btn-pdf-report-text">Download Audit Report (PDF)</span>
+                </button>
+              </div>
+
+              <!-- Region of Interest Tool -->
+              <div class="flex flex-col gap-2 pt-space-sm border-t border-surface-container-highest mt-1">
+                <span
+                  class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline font-semibold">Region
+                  of Interest</span>
+                <div class="flex gap-2">
+                  <button id="btn-roi-draw" type="button"
+                    class="flex-1 flex items-center justify-center gap-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface py-2 px-2 rounded font-body-sm text-body-sm font-medium transition-all">
+                    <span class="material-symbols-outlined text-[16px] text-primary" id="btn-roi-draw-icon">draw</span>
+                    <span id="btn-roi-draw-text">Draw ROI</span>
+                  </button>
+                  <button id="btn-roi-clear" type="button"
+                    class="flex items-center justify-center gap-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface-variant py-2 px-3 rounded font-body-sm text-body-sm font-medium transition-all">
+                    <span class="material-symbols-outlined text-[16px]">clear</span>
+                  </button>
+                </div>
+                <span class="font-body-sm text-body-sm text-on-surface-variant text-[11px]" id="roi-status-text">No ROI
+                  set - analyzing full tile.</span>
               </div>
             </aside>
 
@@ -564,6 +599,10 @@
                   <img id="aerial-ortho-img" alt="High-resolution aerial drone orthomosaic of forest canopy"
                     class="absolute inset-0 w-full h-full object-cover transition-all duration-300 ease-out" src=""
                     data-default-sample="Sundarbans_Sector_4B.png" />
+
+                  <!-- Region of Interest drawing canvas (pointer-events enabled only while drawing) -->
+                  <canvas id="roi-canvas" class="absolute inset-0 w-full h-full z-20"
+                    style="pointer-events:none;"></canvas>
 
                   <!-- Dynamic SVG Geospatial Bounding Vector Layer (populated or overlaid by backend) -->
                   <svg id="dynamic-svg-layer" class="absolute inset-0 w-full h-full pointer-events-none"
@@ -847,6 +886,66 @@
               </div>
             </section>
           </div>
+
+          <!-- Canopy Change Detection (Before / After) -->
+          <div class="flex flex-col bg-surface-container-low/90 backdrop-blur-md p-space-md rounded-xl shadow-md gap-space-md"
+            id="change-detection-card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[20px]">compare</span>
+                <h2 class="font-headline-md text-headline-md text-on-surface text-[17px] leading-tight">Canopy Change
+                  Detection</h2>
+              </div>
+              <span class="font-label-data-sm text-label-data-sm text-on-surface-variant">Compare two surveys of the
+                same site</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+              <div class="flex flex-col gap-1.5">
+                <label class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">Before
+                  (Sample A)</label>
+                <select id="change-sample-a"
+                  class="w-full bg-surface-container-lowest text-on-surface font-body-sm text-body-sm px-3 py-2 rounded focus:outline-none focus:ring-1 focus:ring-primary"></select>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">After
+                  (Sample B)</label>
+                <select id="change-sample-b"
+                  class="w-full bg-surface-container-lowest text-on-surface font-body-sm text-body-sm px-3 py-2 rounded focus:outline-none focus:ring-1 focus:ring-primary"></select>
+              </div>
+            </div>
+            <button id="btn-compare-action" type="button"
+              class="w-full md:w-auto self-start flex items-center justify-center gap-2 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary py-2.5 px-space-lg rounded font-body-md text-body-md font-semibold transition-all shadow-md active:scale-[0.99]">
+              <span class="material-symbols-outlined text-[20px]" id="btn-compare-icon">compare_arrows</span>
+              <span id="btn-compare-text">Run Comparison</span>
+            </button>
+
+            <div id="change-results" class="hidden flex-col gap-space-md">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-space-md items-start">
+                <div class="rounded-lg overflow-hidden bg-surface-container-lowest aspect-[4/3]">
+                  <img id="change-overlay-img" class="w-full h-full object-cover transition-opacity duration-300 ease-out" alt="Canopy change overlay: red = loss, green = gain" src="" />
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                    <span class="font-label-data-sm text-[11px] uppercase text-outline">Canopy Loss</span>
+                    <span class="font-headline-lg text-[20px] font-bold font-mono text-secondary" id="change-loss-m2">0 m²</span>
+                  </div>
+                  <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                    <span class="font-label-data-sm text-[11px] uppercase text-outline">Canopy Gain</span>
+                    <span class="font-headline-lg text-[20px] font-bold font-mono text-primary" id="change-gain-m2">0 m²</span>
+                  </div>
+                  <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                    <span class="font-label-data-sm text-[11px] uppercase text-outline">Net Change</span>
+                    <span class="font-headline-lg text-[20px] font-bold font-mono text-on-surface" id="change-net-m2">0 m²</span>
+                  </div>
+                  <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                    <span class="font-label-data-sm text-[11px] uppercase text-outline">Net CO₂e</span>
+                    <span class="font-headline-lg text-[20px] font-bold font-mono text-on-surface" id="change-co2e">0 t</span>
+                  </div>
+                </div>
+              </div>
+              <span class="font-body-sm text-[11px] text-on-surface-variant">Overlay: red = canopy loss, green = canopy gain. Assumes both tiles frame the same site extent (no georectification is performed beyond a resize).</span>
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -901,6 +1000,98 @@
     const orthoImg = document.getElementById('aerial-ortho-img');
     orthoImg.src = `${API_BASE}/sample_images/${orthoImg.dataset.defaultSample}`;
     const loadingSpinner = document.getElementById('loading-spinner');
+    const heatmapModeSelect = document.getElementById('heatmap-mode-select');
+
+    // --- Region of Interest (ROI) drawing tool ---
+    // Points are stored normalized (0-1) so they stay valid regardless of the
+    // rendered canvas size (zoom/resize/fullscreen).
+    const roiCanvas = document.getElementById('roi-canvas');
+    const roiCtx = roiCanvas.getContext('2d');
+    const aerialWrapper = document.getElementById('aerial-canvas-wrapper');
+    const btnRoiDraw = document.getElementById('btn-roi-draw');
+    const btnRoiDrawText = document.getElementById('btn-roi-draw-text');
+    const btnRoiDrawIcon = document.getElementById('btn-roi-draw-icon');
+    const btnRoiClear = document.getElementById('btn-roi-clear');
+    const roiStatusText = document.getElementById('roi-status-text');
+    let roiPoints = [];
+    let roiDrawingActive = false;
+
+    function resizeRoiCanvas() {
+      roiCanvas.width = aerialWrapper.clientWidth;
+      roiCanvas.height = aerialWrapper.clientHeight;
+      redrawRoi();
+    }
+    window.addEventListener('resize', resizeRoiCanvas);
+    resizeRoiCanvas();
+
+    function redrawRoi() {
+      roiCtx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
+      if (roiPoints.length === 0) return;
+      roiCtx.strokeStyle = '#6ffbbe';
+      roiCtx.fillStyle = 'rgba(16, 185, 129, 0.18)';
+      roiCtx.lineWidth = 2;
+      roiCtx.beginPath();
+      roiPoints.forEach(([nx, ny], i) => {
+        const x = nx * roiCanvas.width;
+        const y = ny * roiCanvas.height;
+        if (i === 0) roiCtx.moveTo(x, y); else roiCtx.lineTo(x, y);
+      });
+      if (roiPoints.length >= 3) roiCtx.closePath();
+      roiCtx.fill();
+      roiCtx.stroke();
+      roiPoints.forEach(([nx, ny]) => {
+        roiCtx.beginPath();
+        roiCtx.fillStyle = '#6ffbbe';
+        roiCtx.arc(nx * roiCanvas.width, ny * roiCanvas.height, 4, 0, Math.PI * 2);
+        roiCtx.fill();
+      });
+    }
+
+    function updateRoiStatus() {
+      if (roiPoints.length >= 3) {
+        roiStatusText.textContent = `ROI active - ${roiPoints.length} vertices constraining detection.`;
+      } else if (roiDrawingActive) {
+        roiStatusText.textContent = `Click on the image to add vertices (${roiPoints.length} so far, need 3+).`;
+      } else {
+        roiStatusText.textContent = 'No ROI set - analyzing full tile.';
+      }
+    }
+
+    btnRoiDraw.addEventListener('click', () => {
+      roiDrawingActive = !roiDrawingActive;
+      roiCanvas.style.pointerEvents = roiDrawingActive ? 'auto' : 'none';
+      roiCanvas.style.cursor = roiDrawingActive ? 'crosshair' : 'default';
+      btnRoiDrawText.textContent = roiDrawingActive ? 'Finish ROI' : 'Draw ROI';
+      btnRoiDrawIcon.textContent = roiDrawingActive ? 'check' : 'draw';
+      if (!roiDrawingActive && roiPoints.length >= 3) {
+        showToast('ROI set - re-run analysis to apply it.', 'success');
+        runCanopyDetection();
+      } else if (!roiDrawingActive && roiPoints.length > 0 && roiPoints.length < 3) {
+        roiPoints = [];
+        redrawRoi();
+      }
+      updateRoiStatus();
+    });
+
+    roiCanvas.addEventListener('click', (e) => {
+      if (!roiDrawingActive) return;
+      const rect = roiCanvas.getBoundingClientRect();
+      roiPoints.push([(e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height]);
+      redrawRoi();
+      updateRoiStatus();
+    });
+
+    btnRoiClear.addEventListener('click', () => {
+      roiPoints = [];
+      roiDrawingActive = false;
+      roiCanvas.style.pointerEvents = 'none';
+      roiCanvas.style.cursor = 'default';
+      btnRoiDrawText.textContent = 'Draw ROI';
+      btnRoiDrawIcon.textContent = 'draw';
+      redrawRoi();
+      updateRoiStatus();
+      runCanopyDetection();
+    });
 
     // Drag and drop & upload handling
     uploadBox.addEventListener('click', () => fileInput.click());
@@ -982,6 +1173,10 @@
       formData.append('show_boxes', chkBoxes.checked);
       formData.append('show_heatmap', chkHeatmap.checked);
       formData.append('show_centroids', chkCentroids.checked);
+      formData.append('heatmap_mode', heatmapModeSelect.value);
+      if (roiPoints.length >= 3) {
+        formData.append('roi_geojson', JSON.stringify(roiPoints));
+      }
 
       try {
         const response = await fetch(`${API_BASE}/api/analyze`, {
@@ -1108,8 +1303,112 @@
       }
     });
 
+    // PDF audit report download - re-runs the same analysis server-side (stateless).
+    document.getElementById('btn-pdf-report-action').addEventListener('click', async () => {
+      const btnText = document.getElementById('btn-pdf-report-text');
+      const original = btnText.textContent;
+      btnText.textContent = 'Generating PDF...';
+      try {
+        const formData = new FormData();
+        if (uploadedFileObj) {
+          formData.append('file', uploadedFileObj);
+        } else if (activeSample) {
+          formData.append('sample_filename', activeSample);
+        }
+        formData.append('confidence', confSlider.value);
+        formData.append('gsd', gsdInput.value);
+        formData.append('show_boxes', chkBoxes.checked);
+        formData.append('show_heatmap', chkHeatmap.checked);
+        formData.append('show_centroids', chkCentroids.checked);
+        formData.append('heatmap_mode', heatmapModeSelect.value);
+        if (roiPoints.length >= 3) formData.append('roi_geojson', JSON.stringify(roiPoints));
+
+        const response = await fetch(`${API_BASE}/api/report`, { method: 'POST', body: formData });
+        if (!response.ok) throw new Error('Report generation failed');
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Flora_Carbon_Audit_Report_${Date.now()}.pdf`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast('Audit report downloaded.', 'success');
+      } catch (err) {
+        console.error('PDF report failed:', err);
+        showToast('Could not generate the PDF report. Try again.', 'error');
+      } finally {
+        btnText.textContent = original;
+      }
+    });
+
+    // --- Canopy Change Detection (before / after comparison) ---
+    async function loadChangeDetectionSamples() {
+      try {
+        const res = await fetch(`${API_BASE}/api/samples`);
+        const data = await res.json();
+        const selA = document.getElementById('change-sample-a');
+        const selB = document.getElementById('change-sample-b');
+        selA.innerHTML = '';
+        selB.innerHTML = '';
+        data.samples.forEach((s, idx) => {
+          const optA = new Option(s.label, s.filename, idx === 0, idx === 0);
+          const optB = new Option(s.label, s.filename, idx === 1, idx === 1);
+          selA.add(optA);
+          selB.add(optB);
+        });
+      } catch (err) {
+        console.error('Failed to load change-detection samples:', err);
+      }
+    }
+
+    document.getElementById('btn-compare-action').addEventListener('click', async () => {
+      const btnText = document.getElementById('btn-compare-text');
+      const btnIcon = document.getElementById('btn-compare-icon');
+      const resultsPanel = document.getElementById('change-results');
+      btnText.textContent = 'Comparing...';
+      btnIcon.classList.add('animate-spin');
+      try {
+        const formData = new FormData();
+        formData.append('sample_a', document.getElementById('change-sample-a').value);
+        formData.append('sample_b', document.getElementById('change-sample-b').value);
+        formData.append('confidence', confSlider.value);
+        formData.append('gsd', gsdInput.value);
+
+        const response = await fetch(`${API_BASE}/api/compare`, { method: 'POST', body: formData });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.detail || 'Comparison failed');
+
+        resultsPanel.classList.remove('hidden');
+        resultsPanel.classList.add('flex');
+        const overlayImg = document.getElementById('change-overlay-img');
+        overlayImg.classList.add('opacity-0');
+        setTimeout(() => {
+          overlayImg.src = result.overlay_image_data;
+          overlayImg.onload = () => overlayImg.classList.remove('opacity-0');
+        }, 180);
+
+        const lossEl = document.getElementById('change-loss-m2');
+        const gainEl = document.getElementById('change-gain-m2');
+        const netEl = document.getElementById('change-net-m2');
+        const co2eEl = document.getElementById('change-co2e');
+        lossEl.textContent = `${result.canopy_loss_m2.toLocaleString()} m²`;
+        gainEl.textContent = `${result.canopy_gain_m2.toLocaleString()} m²`;
+        netEl.textContent = `${result.net_change_m2.toLocaleString()} m²`;
+        co2eEl.textContent = `${result.net_change_co2e_tons.toLocaleString()} t`;
+        [lossEl, gainEl, netEl, co2eEl].forEach(flashUpdate);
+
+        showToast('Change detection complete.', 'success');
+      } catch (err) {
+        console.error('Comparison failed:', err);
+        showToast('Could not complete change detection. Check your connection and try again.', 'error');
+      } finally {
+        btnText.textContent = 'Run Comparison';
+        btnIcon.classList.remove('animate-spin');
+      }
+    });
+
     // Initial startup
     loadSampleOptions().then(() => runCanopyDetection());
+    loadChangeDetectionSamples();
   </script>
 </body>
 
