@@ -329,6 +329,8 @@ canopy_vision_AI/
 │   ├── index.html
 │   └── config.js          # Points the static build at a separately-hosted backend
 ├── data/                  # Created at runtime; holds flora_analytics.db (gitignored)
+├── run.sh                 # Interactive setup & run script (macOS/Linux)
+├── run.ps1                # Interactive setup & run script (Windows PowerShell)
 ├── Dockerfile             # Single-stage container build (no ML framework, OpenCV-only)
 ├── requirements.txt       # Python dependencies
 ├── ROADMAP.md             # Longer-term plan (real ML model, API keys, biome modeling, etc.)
@@ -357,6 +359,27 @@ canopy_vision_AI/
 ---
 
 ## 💻 How to Run Locally
+
+### Quickest path: the interactive setup script
+
+```bash
+./run.sh          # macOS / Linux
+```
+```powershell
+.\run.ps1         # Windows PowerShell
+```
+
+One script handles every scenario end-to-end: detects Python 3, creates/repairs
+the `.venv` virtual environment, installs any missing dependencies, generates
+the sample benchmark images if absent, syncs the decoupled `static-frontend/`
+build, previews your detected hardware tier, optionally walks you through
+Kaggle credential setup and pre-fetching the benchmark dataset, optionally
+builds the Docker image locally, checks the target port is free, and starts
+the server - offering to open your browser automatically. Every prompt has a
+sane default and the script runs unattended (CI-safe) if stdin isn't a
+terminal.
+
+### Manual path
 
 1. **Create a virtual environment and install dependencies**:
 
