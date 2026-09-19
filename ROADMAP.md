@@ -1,9 +1,36 @@
 # Flora Carbon AI — Roadmap
 
-This tracks the longer-term feature plan beyond the current release. Phase 1
-(change detection, PDF reports, ROI selection, confidence heatmap) ships in the
-main app directly — see `app.py` / `detector.py`. Phases below are scoped for
-follow-up sessions.
+This tracks the longer-term feature plan beyond the current release.
+
+**Shipped:**
+- Phase 1: change detection, PDF reports, ROI selection, confidence heatmap.
+- Hardware-adaptive config (`hardware.py`) that tiers resource limits by
+  detected host RAM (4/8/16/64GB+), used across detection resolution, batch
+  concurrency, analytics history size, sensitivity sweep points, and Kaggle
+  benchmark sample size.
+- Real session analytics (`analytics.py`, SQLite) - history, global stats,
+  leaderboard, JSON export - replacing every hardcoded placeholder number
+  that was previously in the dashboard template.
+- Detection insights (score/crown-size histograms, processing-time trend, GSD
+  sensitivity simulator, threshold sensitivity sweep, QGIS `.pgw` export,
+  transparent deforestation risk score).
+- Batch processing (`/api/batch`), live system health (`/api/system/health`),
+  and Kaggle dataset benchmarking (`/api/kaggle/*`) with graceful degradation
+  when Kaggle credentials aren't configured.
+
+Phases below are scoped for follow-up sessions.
+
+## Follow-up: labeled-dataset accuracy benchmark
+
+`/api/kaggle/benchmark` currently reports real *descriptive* detection
+statistics (tree count, cover %, inference time) from actual downloaded
+images - it deliberately does NOT report precision/recall/IoU, because
+arbitrary public Kaggle datasets don't ship crown-bounding-box ground truth in
+our format. A true accuracy benchmark needs a specific annotated dataset (e.g.
+NEON crown-delineation benchmarks, or a COCO/Pascal-VOC-style tree dataset)
+plus a matching-and-scoring step (IoU-based box matching against ground
+truth). Scope this separately once a specific annotated source is chosen -
+don't retrofit fake precision numbers onto unlabeled datasets.
 
 ## Phase 2 — Real trained model, published as an artifact
 
@@ -29,10 +56,6 @@ segmentation in `detector.py`) — no trained weights, which is why it fits in
 
 ## Phase 3 — Platform features
 
-- **Batch/multi-tile processing**: an endpoint that accepts multiple images,
-  runs `analyze_tree_canopy` (or the Phase-1 `/api/compare`) across all of
-  them, and returns an aggregate summary (total canopy, total CO2e, per-tile
-  breakdown) — reuses existing per-image logic, no new detection code.
 - **Public REST API with API keys**: simple header-based key check
   (`X-API-Key`) validated against a small store (SQLite or a hashed key file
   to start — no paid infra required), plus basic in-memory rate limiting per

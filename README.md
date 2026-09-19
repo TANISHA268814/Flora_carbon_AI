@@ -27,10 +27,16 @@ Flora Carbon AI is a full-stack AI remote-sensing application designed for envir
 - **Canopy Change Detection**: Compare two surveys of the same site (`/api/compare`) to quantify canopy loss/gain and net CO₂e change, with a red/green loss-gain overlay.
 - **Region of Interest (ROI) Selection**: Draw a polygon directly on the preview to constrain detection to a specific plot boundary instead of the full tile.
 - **Confidence/Uncertainty Heatmap**: Toggle between a density heatmap and a confidence-weighted heatmap that highlights low-certainty (shadow/overlap-degraded) regions.
-- **PDF Audit Report Export**: One-click downloadable certificate (`/api/report`) with the KPI summary, annotated image, and audited limitations - alongside the existing GeoJSON/CSV export.
+- **PDF Audit Report Export**: One-click downloadable certificate (`/api/report`) with the KPI summary, annotated image, and audited limitations - alongside the existing GeoJSON/CSV/QGIS-world-file exports.
+- **Hardware-Adaptive Sizing**: `hardware.py` detects the host's RAM/CPU at startup and tiers detection resolution, batch concurrency, analytics history, and sweep sizes accordingly (4GB machines run leaner; 16GB+ machines relax the limits) - local-first, no cloud dependency for this.
+- **Detection Insights**: Live confidence-score and crown-size histograms, a rolling processing-time chart, a GSD sensitivity simulator, and a single-pass threshold sensitivity sweep - all computed from real detection output, never mocked.
+- **Session Analytics**: Every analysis is logged to a local SQLite database (`analytics.py`); the dashboard shows genuine cumulative counters, a canopy-cover trend, and a site leaderboard, with a one-click JSON export.
+- **Live System Health**: `/api/system/health` reports actual process RAM, host CPU, uptime, and in-flight request count - not asserted, measured.
+- **Batch Processing**: Upload multiple images at once (`/api/batch`); processed sequentially in hardware-sized chunks with an aggregate CSV export.
+- **Kaggle Dataset Benchmarking**: `/api/kaggle/benchmark` downloads a real public Kaggle dataset and runs the actual detector against it for genuine descriptive statistics (requires the user's own Kaggle API credentials; degrades to a clear message otherwise, never fake data).
 - **Interactive Dashboard UI**: Single FastAPI-served dashboard at `/`, decoupled-frontend-friendly (see `static-frontend/` for a standalone-hosted build).
 
-See `ROADMAP.md` for the longer-term plan (a real trained model published to Hugging Face Hub/Kaggle, batch processing, API keys, biome-aware carbon modeling).
+See `ROADMAP.md` for the longer-term plan (a real trained model published to Hugging Face Hub/Kaggle, labeled-dataset accuracy benchmarking, API keys, biome-aware carbon modeling).
 
 ---
 
@@ -40,6 +46,8 @@ See `ROADMAP.md` for the longer-term plan (a real trained model published to Hug
 canopy_vision_AI/
 ├── app.py                 # FastAPI web application + interactive dashboard UI
 ├── detector.py            # Spectral (Excess Green Index) detection engine, telemetry formulas, ROI/change-detection & OpenCV visualizer
+├── hardware.py            # Local hardware detection (RAM/CPU) -> tiered resource config
+├── analytics.py           # Real session analytics log (SQLite)
 ├── report.py              # PDF audit report generation (reportlab)
 ├── create_samples.py      # Benchmark orthomosaic generator and sample asset manager
 ├── sample_images/         # Benchmark test images for instant one-click evaluation
@@ -79,6 +87,18 @@ canopy_vision_AI/
 2. **Open in Browser**:
    - **Main Dashboard**: [http://localhost:7860](http://localhost:7860)
    - **Interactive API Docs (FastAPI / Swagger)**: [http://localhost:7860/docs](http://localhost:7860/docs)
+
+The app auto-detects your machine's RAM/CPU on startup (see `hardware.py`) and
+logs the chosen tier - no configuration needed. This governs detection
+resolution, batch concurrency, and analytics/history sizing so the same code
+runs comfortably on a 4GB laptop or a 64GB workstation.
+
+**Optional - Kaggle dataset benchmarking**: to enable the "Kaggle Dataset
+Benchmark" panel, set `KAGGLE_USERNAME` and `KAGGLE_KEY` environment variables
+(from [kaggle.com/settings](https://www.kaggle.com/settings) -> API -> Create
+New Token), or place the downloaded `kaggle.json` at `~/.kaggle/kaggle.json`.
+Without credentials, that panel shows a clear "not configured" message - the
+rest of the app is unaffected.
 
 ---
 
