@@ -68,8 +68,8 @@ is hardcoded or simulated.
 | **Exports** | Annotated image (JPEG) · GeoJSON · CSV · PDF audit certificate · QGIS world file (`.pgw`) |
 | **Analytics & Ops** | Real session history (SQLite) · Global cumulative stats · Site leaderboard · JSON export · Live system health (RAM/CPU/uptime/concurrency) |
 | **Throughput** | Batch multi-image processing (hardware-sized chunking) |
-| **External Data** | Kaggle dataset benchmarking (real downloaded imagery, descriptive statistics) |
-| **Platform** | Hardware-adaptive resource tiering · CORS-enabled API for a decoupled frontend · Interactive dashboard UI with stage transitions & toasts |
+| **External Data** | Kaggle dataset benchmarking (aggregate descriptive stats across a real downloaded dataset) · Browse & analyze any individual real image from that dataset through the exact same detect-and-visualize pipeline as an upload |
+| **Platform** | Hardware-adaptive resource tiering · CORS-enabled API for a decoupled frontend · Interactive dashboard UI with stage transitions & toasts · Honest geolocation handling (no fabricated coordinates/species/projection for images with no known location) |
 
 ---
 
@@ -288,7 +288,10 @@ erDiagram
 | GET | `/api/analytics/leaderboard` | Top sites by CO₂e |
 | GET | `/api/analytics/export` | Full analytics log as downloadable JSON |
 | GET | `/api/kaggle/datasets` | Curated dataset list (503 if no Kaggle credentials) |
-| POST | `/api/kaggle/benchmark` | Downloads a real Kaggle dataset and runs the detector against it |
+| POST | `/api/kaggle/benchmark` | Downloads a real Kaggle dataset and runs the detector against a sample, reporting aggregate descriptive stats |
+| GET | `/api/kaggle/images` | Lists real image filenames from an already-downloaded Kaggle dataset, for the image picker |
+| GET | `/api/kaggle/image` | Serves one real image from the cached dataset (thumbnail/preview) |
+| POST | `/api/analyze` (with `kaggle_dataset_slug`+`kaggle_filename`) | Runs one specific real Kaggle image through the exact same single-image pipeline as an upload |
 
 Full interactive schema: `/docs` (FastAPI/Swagger) when the app is running.
 
@@ -441,6 +444,7 @@ for the simplest single-service deployment.
 3. **Resolution Drop (Low-GSD Drift)**: Imagery with GSD > 0.45 m/pixel lacks sub-meter crown border resolution, leading to false-positive canopy area inflation (~6.2%).
 4. **No Georectification**: Change detection aligns image B to image A by a plain resize, not true georectification - both tiles must already frame the same site extent.
 5. **Kaggle Benchmark Scope**: `/api/kaggle/benchmark` reports real descriptive detection statistics, not precision/recall - arbitrary public datasets don't ship crown-box ground truth in this app's format (see `ROADMAP.md`).
+6. **Bundled Sample Provenance**: of the 5 bundled samples, only `OSBS_029.png` and `SOAP_061.png` are real NEON benchmark data with genuine coordinates. `Sundarbans_Sector_4B.png`, `Amazon_Tropical_Plot_08.png`, and `Temperate_Pine_Canopy.png` are procedurally generated illustrative tiles (see `create_samples.py`) - the app labels them as synthetic and does not assign them a fabricated real-world location, EPSG zone, or species classification. Any image with no genuinely known location (uploads, Kaggle images, these synthetic samples) is reported as "not georeferenced" rather than defaulting to a plausible-looking but fake coordinate.
 
 ---
 

@@ -427,9 +427,19 @@ def generate_world_file(origin_lat: float, origin_lon: float, gsd_meters_per_pix
     return "\n".join(lines) + "\n"
 
 
-def generate_geojson(boxes: List[Dict[str, Any]], metrics: Dict[str, Any], origin_lat: float = 21.9497, origin_lon: float = 88.8997) -> Dict[str, Any]:
+def generate_geojson(
+    boxes: List[Dict[str, Any]],
+    metrics: Dict[str, Any],
+    origin_lat: float = 0.0,
+    origin_lon: float = 0.0,
+    is_georeferenced: bool = False
+) -> Dict[str, Any]:
     """
     Creates standard RFC 7946 GeoJSON FeatureCollection for GIS and carbon audits.
+    When is_georeferenced is False, origin_lat/origin_lon are an arbitrary local
+    (0,0) placeholder - coordinates are still emitted (so polygon geometry/shape
+    is usable) but metadata.georeferenced=False makes clear they aren't real
+    map coordinates, instead of silently presenting a fabricated location.
     """
     features = []
     gsd = metrics.get("gsd", 0.20)
@@ -467,7 +477,7 @@ def generate_geojson(boxes: List[Dict[str, Any]], metrics: Dict[str, Any], origi
                 "width_px": round(xmax - xmin, 1),
                 "height_px": round(ymax - ymin, 1),
                 "canopy_area_m2": round((xmax - xmin) * (ymax - ymin) * (gsd ** 2), 2),
-                "species_class": "Mangrove / Tropical Forest",
+                "species_class": "Unclassified (spectral engine does not perform species classification)",
                 "detected_by": "Flora Carbon AI Spectral Engine v1.4"
             }
         }
@@ -478,6 +488,7 @@ def generate_geojson(boxes: List[Dict[str, Any]], metrics: Dict[str, Any], origi
         "metadata": {
             "generated_by": "Flora Carbon AI",
             "model": "Excess Green Index + Contour Segmentation",
+            "georeferenced": is_georeferenced,
             "total_trees": metrics.get("tree_count", 0),
             "total_canopy_m2": metrics.get("total_canopy_m2", 0.0),
             "canopy_cover_percentage": metrics.get("canopy_cover_percentage", 0.0),
@@ -497,8 +508,9 @@ def analyze_tree_canopy(
     show_centroids: bool = True,
     heatmap_mode: str = "density",
     roi_polygon: Any = None,
-    origin_lat: float = 21.9497,
-    origin_lon: float = 88.8997
+    origin_lat: float = 0.0,
+    origin_lon: float = 0.0,
+    is_georeferenced: bool = False
 ) -> Dict[str, Any]:
     """
     Main entry point for tree crown detection and canopy telemetry.
@@ -579,7 +591,7 @@ def analyze_tree_canopy(
     
     # 5. Generate GeoJSON and CSV Data - using the real per-sample origin, not a
     # fixed default, so exports for non-Sundarbans sites aren't mislabeled.
-    geojson_data = generate_geojson(boxes, metrics, origin_lat=origin_lat, origin_lon=origin_lon)
+    geojson_data = generate_geojson(boxes, metrics, origin_lat=origin_lat, origin_lon=origin_lon, is_georeferenced=is_georeferenced)
     
     # Generate CSV text (stdlib csv module - avoids pulling in pandas just to serialize rows)
     csv_fieldnames = ["Crown_ID", "Confidence", "X_Min", "Y_Min", "X_Max", "Y_Max", "Width_px", "Height_px", "Area_m2"]

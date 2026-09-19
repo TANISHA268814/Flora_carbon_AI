@@ -104,42 +104,55 @@ async def list_sample_images():
                 size_mb = round(os.path.getsize(file_path) / (1024 * 1024), 2)
                 
                 label = f.replace("_", " ").replace(".png", "").replace(".jpg", "")
-                if "Sundarbans" in f:
-                    meta = "Sundarbans Biosphere - Sector 4B • Mangrove Ortho"
-                    gsd = 0.20
-                    coords = "21°56'58.9\"N 88°53'58.9\"E"
-                    lat, lon = 21.9497, 88.8997
-                elif "Amazon" in f:
-                    meta = "Amazon Basin - Acre Sector 12 • Tropical Evergreen"
-                    gsd = 0.15
-                    coords = "9°58'29.1\"S 67°48'36.4\"W"
-                    lat, lon = -9.9748, -67.8101
-                elif "Temperate" in f:
-                    meta = "Pacific Northwest - Plot 7 • Temperate Conifer"
-                    gsd = 0.25
-                    coords = "45°22'11.3\"N 121°44'02.1\"W"
-                    lat, lon = 45.3698, -121.7339
-                elif "OSBS" in f:
-                    meta = "NEON OSBS Site • Florida Longleaf Pine Benchmark"
+                # OSBS/SOAP are real NEON benchmark crops with published, genuine site
+                # coordinates. Sundarbans/Amazon/Temperate are procedurally GENERATED
+                # illustrative tiles (see create_samples.py) - they are not photos of
+                # those real places, so they get no fabricated lat/lon/GSD claim.
+                if "OSBS" in f:
+                    meta = "NEON OSBS Site • Florida Longleaf Pine Benchmark (real site data)"
                     gsd = 0.10
                     coords = "29°41'47.4\"N 81°59'38.4\"W"
                     lat, lon = 29.6965, -81.9940
+                    is_synthetic = False
                 elif "SOAP" in f:
-                    meta = "NEON SOAP Site • Sierra National Forest Benchmark"
+                    meta = "NEON SOAP Site • Sierra National Forest Benchmark (real site data)"
                     gsd = 0.10
                     coords = "37°02'01.5\"N 119°15'36.0\"W"
                     lat, lon = 37.0336, -119.2600
-                else:
-                    meta = "UAV Orthomosaic Forest Tile"
+                    is_synthetic = False
+                elif "Sundarbans" in f:
+                    meta = "Synthetic Mangrove-style Ortho (procedurally generated, illustrative only)"
                     gsd = 0.20
-                    coords = "21.9497° N, 88.8997° E"
-                    lat, lon = 21.9497, 88.8997
+                    coords, lat, lon = None, None, None
+                    is_synthetic = True
+                elif "Amazon" in f:
+                    meta = "Synthetic Tropical-Evergreen-style Ortho (procedurally generated, illustrative only)"
+                    gsd = 0.15
+                    coords, lat, lon = None, None, None
+                    is_synthetic = True
+                elif "Temperate" in f:
+                    meta = "Synthetic Temperate-Conifer-style Ortho (procedurally generated, illustrative only)"
+                    gsd = 0.25
+                    coords, lat, lon = None, None, None
+                    is_synthetic = True
+                else:
+                    meta = "Synthetic Orthomosaic-style Tile (procedurally generated, illustrative only)"
+                    gsd = 0.20
+                    coords, lat, lon = None, None, None
+                    is_synthetic = True
 
-                # Real UTM zone/EPSG derived from this sample's actual lat/lon -
-                # not a single fixed value applied to every image regardless of location.
-                utm_zone = int((lon + 180) / 6) + 1
-                epsg = (32600 if lat >= 0 else 32700) + utm_zone
-                hemisphere = "N" if lat >= 0 else "S"
+                if lat is not None:
+                    # Real UTM zone/EPSG derived from this sample's actual lat/lon -
+                    # never a single fixed value applied regardless of true location.
+                    utm_zone = int((lon + 180) / 6) + 1
+                    epsg_code = (32600 if lat >= 0 else 32700) + utm_zone
+                    hemisphere = "N" if lat >= 0 else "S"
+                    epsg = f"EPSG:{epsg_code}"
+                    utm_label = f"WGS 84 / UTM Zone {utm_zone}{hemisphere}"
+                else:
+                    epsg = None
+                    utm_label = "Not georeferenced (synthetic tile)"
+                    coords = "Not georeferenced (synthetic tile)"
 
                 samples.append({
                     "filename": f,
@@ -150,8 +163,9 @@ async def list_sample_images():
                     "coords": coords,
                     "lat": lat,
                     "lon": lon,
-                    "epsg": f"EPSG:{epsg}",
-                    "utm_zone": f"WGS 84 / UTM Zone {utm_zone}{hemisphere}",
+                    "epsg": epsg,
+                    "utm_zone": utm_label,
+                    "is_synthetic": is_synthetic,
                     "url": f"/sample_images/{f}"
                 })
     return {"samples": samples}
@@ -192,6 +206,17 @@ def _load_image_input(
         return Image.open(sample_path).convert("RGB"), samples[0]
 
 
+async def _load_kaggle_image_input(dataset_slug: str, filename: str):
+    """Resolves a user-picked Kaggle dataset image to a (PIL image, display name) pair,
+    reusing the same kagglehub cache as /api/kaggle/images so picking an image the
+    user already browsed doesn't re-download anything."""
+    _require_kaggle_credentials()
+    import kagglehub
+    dataset_path = await run_in_threadpool(kagglehub.dataset_download, dataset_slug)
+    image_path = await run_in_threadpool(_resolve_kaggle_image_path, dataset_path, filename)
+    return Image.open(image_path).convert("RGB"), os.path.basename(image_path)
+
+
 def _parse_roi_polygon(roi_geojson: Optional[str]) -> Optional[list]:
     """Parses an optional JSON-encoded list of [x, y] points sent from the ROI canvas tool."""
     if not roi_geojson:
@@ -216,13 +241,26 @@ async def api_analyze(
     show_centroids: bool = Form(True),
     heatmap_mode: str = Form("density"),
     roi_geojson: Optional[str] = Form(None),
-    origin_lat: float = Form(21.9497),
-    origin_lon: float = Form(88.8997)
+    origin_lat: Optional[float] = Form(None),
+    origin_lon: Optional[float] = Form(None),
+    kaggle_dataset_slug: Optional[str] = Form(None),
+    kaggle_filename: Optional[str] = Form(None)
 ):
     """
     Main detection analysis endpoint:
-    Accepts uploaded files or sample image filenames, executes spectral crown detection,
-    computes carbon/canopy metrics, and returns annotations and telemetry data.
+    Accepts uploaded files, sample image filenames, OR a (kaggle_dataset_slug,
+    kaggle_filename) pair identifying one real image from an already-browsed
+    Kaggle dataset - all three run through the exact same detection pipeline
+    and return the exact same response shape (annotated image, boxes, telemetry,
+    exports). This is what lets a Kaggle image be analyzed and visualized just
+    like an upload, not just averaged into aggregate benchmark statistics.
+
+    origin_lat/origin_lon are optional and REAL only when the caller actually knows
+    them (e.g. a bundled sample with genuine published site coordinates). When
+    omitted - uploads, Kaggle images, or synthetic/illustrative samples - this
+    endpoint does NOT fabricate a location: geojson/world-file exports use an
+    arbitrary local (0,0) origin and are labeled "not georeferenced" rather than
+    silently claiming a real place.
     """
     # Clamp user-supplied sliders to sane bounds regardless of what the client sends.
     confidence = min(0.90, max(0.10, confidence))
@@ -230,10 +268,16 @@ async def api_analyze(
     if heatmap_mode not in ("density", "confidence"):
         heatmap_mode = "density"
     roi_polygon = _parse_roi_polygon(roi_geojson)
+    is_georeferenced = origin_lat is not None and origin_lon is not None
+    effective_lat = origin_lat if is_georeferenced else 0.0
+    effective_lon = origin_lon if is_georeferenced else 0.0
 
     try:
-        contents = await file.read() if (file is not None and file.filename) else None
-        pil_img, filename = _load_image_input(file, contents, sample_filename)
+        if kaggle_dataset_slug and kaggle_filename:
+            pil_img, filename = await _load_kaggle_image_input(kaggle_dataset_slug, kaggle_filename)
+        else:
+            contents = await file.read() if (file is not None and file.filename) else None
+            pil_img, filename = _load_image_input(file, contents, sample_filename)
         img_np = np.array(pil_img)
 
         # Run the CPU-bound detection engine in a worker thread so one heavy request
@@ -250,8 +294,9 @@ async def api_analyze(
                 show_centroids=show_centroids,
                 heatmap_mode=heatmap_mode,
                 roi_polygon=roi_polygon,
-                origin_lat=origin_lat,
-                origin_lon=origin_lon
+                origin_lat=effective_lat,
+                origin_lon=effective_lon,
+                is_georeferenced=is_georeferenced
             )
 
         # Encode annotated image to Base64 JPEG/PNG for instant DOM rendering
@@ -260,14 +305,20 @@ async def api_analyze(
         img_b64 = base64.b64encode(buffer).decode("utf-8")
 
         m = result["metrics"]
-        world_file_text = generate_world_file(origin_lat, origin_lon, gsd)
 
-        # Real UTM zone/EPSG derived from THIS image's actual origin - not a single
-        # fixed zone applied to every image regardless of where it really is.
-        utm_zone = int((origin_lon + 180) / 6) + 1
-        epsg_code = (32600 if origin_lat >= 0 else 32700) + utm_zone
-        hemisphere = "N" if origin_lat >= 0 else "S"
-        projection_label = f"EPSG:{epsg_code} (WGS 84 / UTM Zone {utm_zone}{hemisphere})"
+        if is_georeferenced:
+            # Real UTM zone/EPSG derived from THIS image's actual known origin -
+            # never a single fixed zone applied regardless of true location.
+            utm_zone = int((effective_lon + 180) / 6) + 1
+            epsg_code = (32600 if effective_lat >= 0 else 32700) + utm_zone
+            hemisphere = "N" if effective_lat >= 0 else "S"
+            projection_label = f"EPSG:{epsg_code} (WGS 84 / UTM Zone {utm_zone}{hemisphere})"
+            world_file_text = generate_world_file(effective_lat, effective_lon, gsd)
+        else:
+            # No real location known for this image (upload, Kaggle image, or a
+            # synthetic/illustrative sample) - say so honestly instead of guessing.
+            projection_label = "Not georeferenced (no known location for this image)"
+            world_file_text = None
 
         # Real session logging - powers the analytics dashboard (history, global
         # counters, leaderboard). Never raises into the response on failure.
@@ -296,6 +347,7 @@ async def api_analyze(
             "csv_text": result["csv_text"],
             "world_file_text": world_file_text,
             "projection_label": projection_label,
+            "is_georeferenced": is_georeferenced,
             "origin_lat": origin_lat,
             "origin_lon": origin_lon
         }
@@ -402,22 +454,32 @@ async def api_report(
     show_centroids: bool = Form(True),
     heatmap_mode: str = Form("density"),
     roi_geojson: Optional[str] = Form(None),
-    origin_lat: float = Form(21.9497),
-    origin_lon: float = Form(88.8997)
+    origin_lat: Optional[float] = Form(None),
+    origin_lon: Optional[float] = Form(None),
+    kaggle_dataset_slug: Optional[str] = Form(None),
+    kaggle_filename: Optional[str] = Form(None)
 ):
     """
     Re-runs the same analysis as /api/analyze (stateless - no server-side caching)
-    and returns a downloadable PDF audit certificate instead of JSON.
+    and returns a downloadable PDF audit certificate instead of JSON. See
+    /api/analyze's docstring re: origin_lat/lon and the Kaggle image source - no
+    location is fabricated when the caller doesn't actually know one.
     """
     confidence = min(0.90, max(0.10, confidence))
     gsd = min(5.0, max(0.01, gsd))
     if heatmap_mode not in ("density", "confidence"):
         heatmap_mode = "density"
     roi_polygon = _parse_roi_polygon(roi_geojson)
+    is_georeferenced = origin_lat is not None and origin_lon is not None
+    effective_lat = origin_lat if is_georeferenced else 0.0
+    effective_lon = origin_lon if is_georeferenced else 0.0
 
     try:
-        contents = await file.read() if (file is not None and file.filename) else None
-        pil_img, filename = _load_image_input(file, contents, sample_filename)
+        if kaggle_dataset_slug and kaggle_filename:
+            pil_img, filename = await _load_kaggle_image_input(kaggle_dataset_slug, kaggle_filename)
+        else:
+            contents = await file.read() if (file is not None and file.filename) else None
+            pil_img, filename = _load_image_input(file, contents, sample_filename)
 
         with _TrackConcurrency():
             result = await run_in_threadpool(
@@ -430,8 +492,9 @@ async def api_report(
                 show_centroids=show_centroids,
                 heatmap_mode=heatmap_mode,
                 roi_polygon=roi_polygon,
-                origin_lat=origin_lat,
-                origin_lon=origin_lon
+                origin_lat=effective_lat,
+                origin_lon=effective_lon,
+                is_georeferenced=is_georeferenced
             )
 
         annotated_bgr = cv2.cvtColor(result["annotated_image"], cv2.COLOR_RGB2BGR)
@@ -674,6 +737,97 @@ def _kaggle_credentials_available() -> bool:
     if os.environ.get("KAGGLE_USERNAME") and os.environ.get("KAGGLE_KEY"):
         return True
     return os.path.exists(os.path.expanduser("~/.kaggle/kaggle.json"))
+
+
+def _require_kaggle_credentials():
+    if not _kaggle_credentials_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Kaggle credentials not configured. Set KAGGLE_USERNAME/KAGGLE_KEY "
+                   "env vars or place a kaggle.json at ~/.kaggle/kaggle.json."
+        )
+
+
+def _list_kaggle_dataset_images(dataset_path: str) -> list:
+    image_files = []
+    for root, _, files_in_dir in os.walk(dataset_path):
+        for fname in files_in_dir:
+            if fname.lower().endswith((".png", ".jpg", ".jpeg")):
+                image_files.append(os.path.join(root, fname))
+    return sorted(image_files)
+
+
+def _resolve_kaggle_image_path(dataset_path: str, filename: str) -> str:
+    """Resolves a user-picked filename to a real file inside the already-downloaded
+    dataset directory, rejecting anything that isn't actually inside it (basename-only
+    matching + a containment check prevents path traversal via a crafted filename)."""
+    safe_name = os.path.basename(filename)
+    for candidate in _list_kaggle_dataset_images(dataset_path):
+        if os.path.basename(candidate) == safe_name:
+            resolved = os.path.realpath(candidate)
+            if resolved.startswith(os.path.realpath(dataset_path)):
+                return resolved
+    raise HTTPException(status_code=404, detail=f"Image '{filename}' not found in this dataset")
+
+
+@app.get("/api/kaggle/images")
+async def api_kaggle_images(dataset_slug: str, limit: int = 24):
+    """
+    Lists real image files from a downloaded (and kagglehub-cached) Kaggle dataset,
+    so the user can pick one to run through the exact same detection pipeline as
+    an upload - instead of only seeing aggregate benchmark statistics.
+    """
+    _require_kaggle_credentials()
+    try:
+        import kagglehub
+        dataset_path = await run_in_threadpool(kagglehub.dataset_download, dataset_slug)
+        image_files = await run_in_threadpool(_list_kaggle_dataset_images, dataset_path)
+        if not image_files:
+            raise HTTPException(status_code=404, detail=f"No images found in dataset '{dataset_slug}'")
+
+        limit = max(1, min(100, limit))
+        items = []
+        for path in image_files[:limit]:
+            fname = os.path.basename(path)
+            items.append({
+                "filename": fname,
+                "size_kb": round(os.path.getsize(path) / 1024, 1),
+                "thumbnail_url": f"/api/kaggle/image?dataset_slug={dataset_slug}&filename={fname}"
+            })
+        return JSONResponse(content={
+            "success": True,
+            "dataset_slug": dataset_slug,
+            "total_images_in_dataset": len(image_files),
+            "images": items
+        })
+    except HTTPException:
+        raise
+    except ImportError:
+        raise HTTPException(status_code=500, detail="kagglehub is not installed")
+    except Exception as e:
+        logger.exception("Error listing Kaggle dataset images")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/kaggle/image")
+async def api_kaggle_image(dataset_slug: str, filename: str):
+    """Serves one real image file from a cached Kaggle dataset (for thumbnails/preview)."""
+    _require_kaggle_credentials()
+    try:
+        import kagglehub
+        dataset_path = await run_in_threadpool(kagglehub.dataset_download, dataset_slug)
+        image_path = await run_in_threadpool(_resolve_kaggle_image_path, dataset_path, filename)
+        ext = os.path.splitext(image_path)[1].lower()
+        media_type = "image/png" if ext == ".png" else "image/jpeg"
+        with open(image_path, "rb") as f:
+            return Response(content=f.read(), media_type=media_type)
+    except HTTPException:
+        raise
+    except ImportError:
+        raise HTTPException(status_code=500, detail="kagglehub is not installed")
+    except Exception as e:
+        logger.exception("Error serving Kaggle dataset image")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/kaggle/datasets")

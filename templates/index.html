@@ -231,10 +231,10 @@
           class="hidden md:flex flex-col items-end bg-surface-container-lowest/60 px-space-md py-1 rounded border border-outline-variant/30">
           <div class="flex items-center gap-1.5 text-on-surface font-body-sm text-body-sm font-medium">
             <span class="material-symbols-outlined text-[16px] text-primary">public</span>
-            <span id="header-sector-name">Sundarbans Biosphere - Sector 4B</span>
+            <span id="header-sector-name">Loading...</span>
           </div>
           <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono"
-            id="header-coords-val">21.9497° N, 88.8997° E</span>
+            id="header-coords-val">--</span>
         </div>
         <button id="quick-export-btn"
           class="hidden sm:inline-flex items-center gap-1.5 px-space-md py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface hover:text-on-surface border border-outline-variant/60 hover:border-primary rounded transition-all font-body-sm text-body-sm font-medium"
@@ -1221,6 +1221,19 @@
               </div>
               <span class="font-body-sm text-[11px] text-on-surface-variant" id="kaggle-note"></span>
             </div>
+
+            <div class="flex flex-col gap-2 pt-2 border-t border-surface-container-highest/50" id="kaggle-browse-section" style="display:none;">
+              <div class="flex items-center justify-between">
+                <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline font-semibold">Browse
+                  &amp; Analyze an Individual Image</span>
+                <button id="btn-kaggle-load-images" type="button"
+                  class="flex items-center gap-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-[11px] font-medium py-1 px-2.5 rounded transition-all">
+                  <span class="material-symbols-outlined text-[14px]">refresh</span> Load Real Images
+                </button>
+              </div>
+              <span class="font-body-sm text-[11px] text-on-surface-variant">Pick any real image straight from this dataset and run it through the exact same detection pipeline as an upload - full annotated preview, telemetry, exports, all of it.</span>
+              <div id="kaggle-image-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1386,30 +1399,38 @@
       }
     });
 
-    // Real per-sample origin (set whenever a sample is selected; left at a
-    // documented default for raw uploads with no known geolocation).
-    let activeOriginLat = 21.9497;
-    let activeOriginLon = 88.8997;
+    // Real per-sample origin - null means "no known real-world location" (raw
+    // uploads, Kaggle images, and synthetic/illustrative samples all stay null;
+    // only samples with genuine published coordinates, e.g. the real NEON
+    // OSBS/SOAP benchmarks, get real numbers here). Never defaults to a fake place.
+    let activeOriginLat = null;
+    let activeOriginLon = null;
     let sampleCatalog = [];
 
     function applySampleMeta(s) {
       activeSample = s.filename;
-      activeOriginLat = s.lat;
+      activeOriginLat = s.lat;   // null for synthetic/illustrative samples - honest, not faked
       activeOriginLon = s.lon;
       uploadedFileObj = null;
+      activeKaggleDatasetSlug = null;
+      activeKaggleFilename = null;
       gsdInput.value = s.recommended_gsd.toFixed(2);
       document.getElementById('loaded-tile-name').innerText = s.filename;
       document.getElementById('loaded-tile-info').innerText = `${s.size_mb} MB • ${s.meta}`;
       document.getElementById('header-sector-name').innerText = s.meta.split('•')[0].trim();
       document.getElementById('header-coords-val').innerText = s.coords;
       document.getElementById('hud-coordinates-text').innerText = s.coords;
-      document.getElementById('hud-source-label').innerText = `Source: ${s.filename}`;
-      document.getElementById('hud-projection-text').innerText = `${s.epsg} (${s.utm_zone})`;
+      document.getElementById('hud-source-label').innerText = `Source: ${s.filename}${s.is_synthetic ? ' (synthetic)' : ''}`;
+      document.getElementById('hud-projection-text').innerText = s.epsg ? `${s.epsg} (${s.utm_zone})` : s.utm_zone;
     }
 
     function processFileInput(file) {
       uploadedFileObj = file;
       activeSample = null;
+      activeOriginLat = null;
+      activeOriginLon = null;
+      activeKaggleDatasetSlug = null;
+      activeKaggleFilename = null;
       document.getElementById('loaded-tile-name').innerText = file.name;
       document.getElementById('loaded-tile-info').innerText = `${(file.size / (1024 * 1024)).toFixed(2)} MB • Custom Orthomosaic Ingestion`;
       document.getElementById('header-sector-name').innerText = file.name;
@@ -1461,7 +1482,10 @@
       document.getElementById('analyze-action-icon').classList.add('animate-spin');
 
       const formData = new FormData();
-      if (uploadedFileObj) {
+      if (activeKaggleDatasetSlug && activeKaggleFilename) {
+        formData.append('kaggle_dataset_slug', activeKaggleDatasetSlug);
+        formData.append('kaggle_filename', activeKaggleFilename);
+      } else if (uploadedFileObj) {
         formData.append('file', uploadedFileObj);
       } else if (activeSample) {
         formData.append('sample_filename', activeSample);
@@ -1472,8 +1496,13 @@
       formData.append('show_heatmap', chkHeatmap.checked);
       formData.append('show_centroids', chkCentroids.checked);
       formData.append('heatmap_mode', heatmapModeSelect.value);
-      formData.append('origin_lat', activeOriginLat);
-      formData.append('origin_lon', activeOriginLon);
+      // Only send a location when one is actually known - omitting the field
+      // (rather than sending a placeholder) is what tells the backend not to
+      // fabricate a projection/EPSG claim for this image.
+      if (activeOriginLat !== null && activeOriginLon !== null) {
+        formData.append('origin_lat', activeOriginLat);
+        formData.append('origin_lon', activeOriginLon);
+      }
       if (roiPoints.length >= 3) {
         formData.append('roi_geojson', JSON.stringify(roiPoints));
       }
@@ -1618,7 +1647,10 @@
       btnText.textContent = 'Generating PDF...';
       try {
         const formData = new FormData();
-        if (uploadedFileObj) {
+        if (activeKaggleDatasetSlug && activeKaggleFilename) {
+          formData.append('kaggle_dataset_slug', activeKaggleDatasetSlug);
+          formData.append('kaggle_filename', activeKaggleFilename);
+        } else if (uploadedFileObj) {
           formData.append('file', uploadedFileObj);
         } else if (activeSample) {
           formData.append('sample_filename', activeSample);
@@ -1629,8 +1661,10 @@
         formData.append('show_heatmap', chkHeatmap.checked);
         formData.append('show_centroids', chkCentroids.checked);
         formData.append('heatmap_mode', heatmapModeSelect.value);
-        formData.append('origin_lat', activeOriginLat);
-        formData.append('origin_lon', activeOriginLon);
+        if (activeOriginLat !== null && activeOriginLon !== null) {
+          formData.append('origin_lat', activeOriginLat);
+          formData.append('origin_lon', activeOriginLon);
+        }
         if (roiPoints.length >= 3) formData.append('roi_geojson', JSON.stringify(roiPoints));
 
         const response = await fetch(`${API_BASE}/api/report`, { method: 'POST', body: formData });
@@ -2004,10 +2038,64 @@
         data.datasets.forEach(d => select.add(new Option(d.label, d.slug)));
         statusText.textContent = 'Kaggle credentials detected - real dataset benchmarking available.';
         controls.style.display = 'flex';
+        document.getElementById('kaggle-browse-section').style.display = 'flex';
       } catch (err) {
         statusText.textContent = 'Could not reach the backend to check Kaggle status.';
         console.error(err);
       }
+    }
+
+    // Active Kaggle image selection - a third input source alongside a bundled
+    // sample and a raw upload. Analyzing it runs the exact same detection
+    // pipeline as an upload; nothing here is aggregate-only.
+    let activeKaggleDatasetSlug = null;
+    let activeKaggleFilename = null;
+
+    document.getElementById('btn-kaggle-load-images').addEventListener('click', async () => {
+      const grid = document.getElementById('kaggle-image-grid');
+      const datasetSlug = document.getElementById('kaggle-dataset-select').value;
+      grid.innerHTML = '<span class="col-span-full font-body-sm text-[11px] text-on-surface-variant">Loading real images from the dataset...</span>';
+      try {
+        const res = await fetch(`${API_BASE}/api/kaggle/images?dataset_slug=${encodeURIComponent(datasetSlug)}&limit=24`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to list dataset images');
+
+        grid.innerHTML = '';
+        data.images.forEach(img => {
+          const thumb = document.createElement('button');
+          thumb.type = 'button';
+          thumb.className = 'relative aspect-square rounded overflow-hidden bg-surface-container-lowest border border-transparent hover:border-primary transition-all';
+          thumb.title = `${img.filename} (${img.size_kb} KB)`;
+          thumb.innerHTML = `<img src="${API_BASE}${img.thumbnail_url}" class="w-full h-full object-cover" loading="lazy" alt="${img.filename}" />`;
+          thumb.onclick = () => selectKaggleImage(datasetSlug, img.filename, thumb, grid);
+          grid.appendChild(thumb);
+        });
+        showToast(`Loaded ${data.images.length} real images (dataset has ${data.total_images_in_dataset} total).`, 'success');
+      } catch (err) {
+        console.error('Failed to load Kaggle images:', err);
+        grid.innerHTML = '';
+        showToast('Could not load images from this dataset: ' + err.message, 'error');
+      }
+    });
+
+    function selectKaggleImage(datasetSlug, filename, thumbEl, grid) {
+      activeKaggleDatasetSlug = datasetSlug;
+      activeKaggleFilename = filename;
+      activeSample = null;
+      uploadedFileObj = null;
+      activeOriginLat = null;
+      activeOriginLon = null;
+      Array.from(grid.children).forEach(c => c.classList.remove('border-primary'));
+      thumbEl.classList.add('border-primary');
+      document.getElementById('loaded-tile-name').innerText = filename;
+      document.getElementById('loaded-tile-info').innerText = `Kaggle: ${datasetSlug}`;
+      document.getElementById('header-sector-name').innerText = filename;
+      document.getElementById('header-coords-val').innerText = 'Not georeferenced (Kaggle image)';
+      document.getElementById('hud-source-label').innerText = `Source: ${filename} (Kaggle: ${datasetSlug})`;
+      document.getElementById('hud-projection-text').innerText = 'Not georeferenced';
+      showToast(`Analyzing real Kaggle image: ${filename}`, 'info');
+      runCanopyDetection();
+      document.getElementById('aerial-canvas-wrapper').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     document.getElementById('btn-kaggle-run').addEventListener('click', async () => {
