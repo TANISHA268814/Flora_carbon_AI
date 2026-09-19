@@ -24,7 +24,13 @@ Flora Carbon AI is a full-stack AI remote-sensing application designed for envir
 - **Carbon Sequestration & Biomass (AGB)**: Pantropical allometric biomass modeling (Chave et al., 2014 & Jucker et al., 2017) estimating dry Above-Ground Biomass (tons) and carbon dioxide equivalents ($t\text{ CO}_2\text{e}$).
 - **Interactive Emerald Stitch UI**: Dark-mode geospatial telemetry HUD featuring real-time reticle overlays, centroid crosshairs, heatmaps, FOV calculation, and instant GeoJSON / CSV exports.
 - **Honesty & Model Transparency Card**: Audited failure mode callouts detailing dense canopy overlaps, deep terrain shadows, and low-GSD resolution drift.
+- **Canopy Change Detection**: Compare two surveys of the same site (`/api/compare`) to quantify canopy loss/gain and net CO₂e change, with a red/green loss-gain overlay.
+- **Region of Interest (ROI) Selection**: Draw a polygon directly on the preview to constrain detection to a specific plot boundary instead of the full tile.
+- **Confidence/Uncertainty Heatmap**: Toggle between a density heatmap and a confidence-weighted heatmap that highlights low-certainty (shadow/overlap-degraded) regions.
+- **PDF Audit Report Export**: One-click downloadable certificate (`/api/report`) with the KPI summary, annotated image, and audited limitations - alongside the existing GeoJSON/CSV export.
 - **Interactive Dashboard UI**: Single FastAPI-served dashboard at `/`, decoupled-frontend-friendly (see `static-frontend/` for a standalone-hosted build).
+
+See `ROADMAP.md` for the longer-term plan (a real trained model published to Hugging Face Hub/Kaggle, batch processing, API keys, biome-aware carbon modeling).
 
 ---
 
@@ -33,7 +39,8 @@ Flora Carbon AI is a full-stack AI remote-sensing application designed for envir
 ```
 canopy_vision_AI/
 ├── app.py                 # FastAPI web application + interactive dashboard UI
-├── detector.py            # Spectral (Excess Green Index) detection engine, telemetry formulas & OpenCV visualizer
+├── detector.py            # Spectral (Excess Green Index) detection engine, telemetry formulas, ROI/change-detection & OpenCV visualizer
+├── report.py              # PDF audit report generation (reportlab)
 ├── create_samples.py      # Benchmark orthomosaic generator and sample asset manager
 ├── sample_images/         # Benchmark test images for instant one-click evaluation
 │   ├── OSBS_029.png       # NEON Florida Longleaf Pine benchmark
