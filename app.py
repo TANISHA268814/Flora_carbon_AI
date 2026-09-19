@@ -21,7 +21,8 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from detector import analyze_tree_canopy
+from detector import analyze_tree_canopy, detect_canopy_change
+from report import generate_pdf_report
 
 logger = logging.getLogger("FloraApp")
 logging.basicConfig(level=logging.INFO)
@@ -111,6 +112,54 @@ async def list_sample_images():
     return {"samples": samples}
 
 
+def _load_image_input(
+    file: Optional[UploadFile],
+    contents: Optional[bytes],
+    sample_filename: Optional[str]
+):
+    """Shared resolution of an (uploaded file | sample filename | default sample) -> (PIL image, name)."""
+    if file is not None and file.filename:
+        if len(contents) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)}MB upload limit."
+            )
+        try:
+            pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
+        except UnidentifiedImageError:
+            raise HTTPException(status_code=400, detail="Uploaded file is not a valid image.")
+        return pil_img, file.filename
+    elif sample_filename:
+        # Prevent path traversal via a crafted sample_filename (e.g. "../../etc/passwd").
+        safe_name = os.path.basename(sample_filename)
+        sample_path = os.path.join(SAMPLE_DIR, safe_name)
+        if not os.path.exists(sample_path):
+            raise HTTPException(status_code=404, detail="Sample image not found")
+        return Image.open(sample_path).convert("RGB"), safe_name
+    else:
+        samples = sorted(
+            f for f in os.listdir(SAMPLE_DIR)
+            if f.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff"))
+        )
+        if not samples:
+            raise HTTPException(status_code=400, detail="No image provided and no samples found")
+        sample_path = os.path.join(SAMPLE_DIR, samples[0])
+        return Image.open(sample_path).convert("RGB"), samples[0]
+
+
+def _parse_roi_polygon(roi_geojson: Optional[str]) -> Optional[list]:
+    """Parses an optional JSON-encoded list of [x, y] points sent from the ROI canvas tool."""
+    if not roi_geojson:
+        return None
+    try:
+        points = json.loads(roi_geojson)
+        if isinstance(points, list) and len(points) >= 3:
+            return points
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
 @app.post("/api/analyze")
 async def api_analyze(
     file: Optional[UploadFile] = File(None),
@@ -119,7 +168,9 @@ async def api_analyze(
     gsd: float = Form(0.20),
     show_boxes: bool = Form(True),
     show_heatmap: bool = Form(False),
-    show_centroids: bool = Form(True)
+    show_centroids: bool = Form(True),
+    heatmap_mode: str = Form("density"),
+    roi_geojson: Optional[str] = Form(None)
 ):
     """
     Main detection analysis endpoint:
@@ -129,40 +180,13 @@ async def api_analyze(
     # Clamp user-supplied sliders to sane bounds regardless of what the client sends.
     confidence = min(0.90, max(0.10, confidence))
     gsd = min(5.0, max(0.01, gsd))
+    if heatmap_mode not in ("density", "confidence"):
+        heatmap_mode = "density"
+    roi_polygon = _parse_roi_polygon(roi_geojson)
 
     try:
-        if file is not None and file.filename:
-            contents = await file.read()
-            if len(contents) > MAX_UPLOAD_BYTES:
-                raise HTTPException(
-                    status_code=413,
-                    detail=f"File exceeds {MAX_UPLOAD_BYTES // (1024 * 1024)}MB upload limit."
-                )
-            try:
-                pil_img = Image.open(io.BytesIO(contents)).convert("RGB")
-            except UnidentifiedImageError:
-                raise HTTPException(status_code=400, detail="Uploaded file is not a valid image.")
-            filename = file.filename
-        elif sample_filename:
-            # Prevent path traversal via a crafted sample_filename (e.g. "../../etc/passwd").
-            safe_name = os.path.basename(sample_filename)
-            sample_path = os.path.join(SAMPLE_DIR, safe_name)
-            if not os.path.exists(sample_path):
-                raise HTTPException(status_code=404, detail="Sample image not found")
-            pil_img = Image.open(sample_path).convert("RGB")
-            filename = safe_name
-        else:
-            # Fallback to first available sample
-            samples = sorted(
-                f for f in os.listdir(SAMPLE_DIR)
-                if f.lower().endswith((".png", ".jpg", ".jpeg", ".tif", ".tiff"))
-            )
-            if not samples:
-                raise HTTPException(status_code=400, detail="No image provided and no samples found")
-            sample_path = os.path.join(SAMPLE_DIR, samples[0])
-            pil_img = Image.open(sample_path).convert("RGB")
-            filename = samples[0]
-
+        contents = await file.read() if (file is not None and file.filename) else None
+        pil_img, filename = _load_image_input(file, contents, sample_filename)
         img_np = np.array(pil_img)
 
         # Run the CPU-bound detection engine in a worker thread so one heavy request
@@ -175,7 +199,9 @@ async def api_analyze(
             gsd_meters_per_pixel=gsd,
             show_boxes=show_boxes,
             show_heatmap=show_heatmap,
-            show_centroids=show_centroids
+            show_centroids=show_centroids,
+            heatmap_mode=heatmap_mode,
+            roi_polygon=roi_polygon
         )
 
         # Encode annotated image to Base64 JPEG/PNG for instant DOM rendering
@@ -203,6 +229,139 @@ async def api_analyze(
         raise  # preserve intended status codes (400/404/413) instead of flattening to 500
     except Exception as e:
         logger.exception("Error during analysis")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _encode_jpeg_b64(image_rgb: np.ndarray, quality: int = 92) -> str:
+    bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+    _, buffer = cv2.imencode(".jpg", bgr, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    return base64.b64encode(buffer).decode("utf-8")
+
+
+@app.post("/api/compare")
+async def api_compare(
+    file_a: Optional[UploadFile] = File(None),
+    file_b: Optional[UploadFile] = File(None),
+    sample_a: Optional[str] = Form(None),
+    sample_b: Optional[str] = Form(None),
+    confidence: float = Form(0.40),
+    gsd: float = Form(0.20)
+):
+    """
+    Change-detection endpoint: runs the core detector on two images of the same site
+    (e.g. two survey dates) and reports canopy loss/gain between them. No
+    georectification is performed - image B is aligned to image A by a plain resize,
+    so this assumes both tiles already frame the same extent.
+    """
+    confidence = min(0.90, max(0.10, confidence))
+    gsd = min(5.0, max(0.01, gsd))
+
+    try:
+        contents_a = await file_a.read() if (file_a is not None and file_a.filename) else None
+        contents_b = await file_b.read() if (file_b is not None and file_b.filename) else None
+        pil_a, name_a = _load_image_input(file_a, contents_a, sample_a)
+        pil_b, name_b = _load_image_input(file_b, contents_b, sample_b)
+
+        result_a = await run_in_threadpool(
+            analyze_tree_canopy,
+            image_input=np.array(pil_a),
+            confidence_threshold=confidence,
+            gsd_meters_per_pixel=gsd,
+            show_boxes=True,
+            show_heatmap=False,
+            show_centroids=False
+        )
+        result_b = await run_in_threadpool(
+            analyze_tree_canopy,
+            image_input=np.array(pil_b),
+            confidence_threshold=confidence,
+            gsd_meters_per_pixel=gsd,
+            show_boxes=True,
+            show_heatmap=False,
+            show_centroids=False
+        )
+
+        change = await run_in_threadpool(detect_canopy_change, result_a, result_b, gsd)
+
+        overlay_b64 = _encode_jpeg_b64(cv2.addWeighted(
+            result_a["annotated_image"], 0.55, change["overlay_mask"], 0.45, 0
+        ))
+
+        return JSONResponse(content={
+            "success": True,
+            "filename_a": name_a,
+            "filename_b": name_b,
+            "metrics_a": result_a["metrics"],
+            "metrics_b": result_b["metrics"],
+            "canopy_loss_m2": change["canopy_loss_m2"],
+            "canopy_gain_m2": change["canopy_gain_m2"],
+            "net_change_m2": change["net_change_m2"],
+            "net_change_co2e_tons": change["net_change_co2e_tons"],
+            "overlay_image_data": f"data:image/jpeg;base64,{overlay_b64}"
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error during change detection")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/report")
+async def api_report(
+    file: Optional[UploadFile] = File(None),
+    sample_filename: Optional[str] = Form(None),
+    confidence: float = Form(0.40),
+    gsd: float = Form(0.20),
+    show_boxes: bool = Form(True),
+    show_heatmap: bool = Form(False),
+    show_centroids: bool = Form(True),
+    heatmap_mode: str = Form("density"),
+    roi_geojson: Optional[str] = Form(None)
+):
+    """
+    Re-runs the same analysis as /api/analyze (stateless - no server-side caching)
+    and returns a downloadable PDF audit certificate instead of JSON.
+    """
+    confidence = min(0.90, max(0.10, confidence))
+    gsd = min(5.0, max(0.01, gsd))
+    if heatmap_mode not in ("density", "confidence"):
+        heatmap_mode = "density"
+    roi_polygon = _parse_roi_polygon(roi_geojson)
+
+    try:
+        contents = await file.read() if (file is not None and file.filename) else None
+        pil_img, filename = _load_image_input(file, contents, sample_filename)
+
+        result = await run_in_threadpool(
+            analyze_tree_canopy,
+            image_input=np.array(pil_img),
+            confidence_threshold=confidence,
+            gsd_meters_per_pixel=gsd,
+            show_boxes=show_boxes,
+            show_heatmap=show_heatmap,
+            show_centroids=show_centroids,
+            heatmap_mode=heatmap_mode,
+            roi_polygon=roi_polygon
+        )
+
+        annotated_bgr = cv2.cvtColor(result["annotated_image"], cv2.COLOR_RGB2BGR)
+        _, buffer = cv2.imencode(".jpg", annotated_bgr, [cv2.IMWRITE_JPEG_QUALITY, 90])
+
+        pdf_bytes = await run_in_threadpool(
+            generate_pdf_report, result, filename, buffer.tobytes()
+        )
+
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="flora_carbon_report_{int(time.time())}.pdf"'}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error generating report")
         raise HTTPException(status_code=500, detail=str(e))
 
 
