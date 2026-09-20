@@ -221,7 +221,7 @@
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
         </span>
-        <span class="font-label-data-sm text-label-data-sm text-on-surface">Kolkata Hackathon Prototype</span>
+        <span class="font-label-data-sm text-label-data-sm text-on-surface" id="hud-hardware-tier">Detecting Hardware...</span>
         <span class="text-outline-variant font-label-data-sm text-label-data-sm">|</span>
         <span class="font-label-data-sm text-label-data-sm text-primary font-medium tracking-wide"
           id="telemetry-status-tag">Telemetry Online</span>
@@ -231,10 +231,10 @@
           class="hidden md:flex flex-col items-end bg-surface-container-lowest/60 px-space-md py-1 rounded border border-outline-variant/30">
           <div class="flex items-center gap-1.5 text-on-surface font-body-sm text-body-sm font-medium">
             <span class="material-symbols-outlined text-[16px] text-primary">public</span>
-            <span id="header-sector-name">Sundarbans Biosphere - Sector 4B</span>
+            <span id="header-sector-name">Loading...</span>
           </div>
           <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono"
-            id="header-coords-val">21.9497° N, 88.8997° E</span>
+            id="header-coords-val">--</span>
         </div>
         <button id="quick-export-btn"
           class="hidden sm:inline-flex items-center gap-1.5 px-space-md py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface hover:text-on-surface border border-outline-variant/60 hover:border-primary rounded transition-all font-body-sm text-body-sm font-medium"
@@ -263,28 +263,40 @@
         data-active-classes="bg-primary-container text-on-primary-container font-semibold">
         <a aria-current="page"
           class="flex items-center gap-space-sm px-space-md py-2 rounded transition-all bg-primary-container text-on-primary-container font-semibold"
-          data-path="canopy-monitor" href="#">
-          <span class="material-symbols-outlined text-[20px]">radar</span>Canopy Monitor
+          data-path="canopy-monitor" href="#aerial-canvas-wrapper">
+          <span class="material-symbols-outlined text-[20px]">radar</span>1. Canopy Monitor
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
           data-path="carbon-flux-analysis" href="#telemetry-card">
-          <span class="material-symbols-outlined text-[20px]">co2</span>Carbon Flux Analysis
+          <span class="material-symbols-outlined text-[20px]">co2</span>2. Carbon &amp; Biomass
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
-          data-path="biomass-lidar-viewer" href="#telemetry-card">
-          <span class="material-symbols-outlined text-[20px]">layers</span>Biomass Estimate
+          data-path="change-detection" href="#change-detection-card">
+          <span class="material-symbols-outlined text-[20px]">compare</span>3. Change &amp; Risk
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
-          data-path="deforestation-alerts" href="#failure-modes-card">
-          <span class="material-symbols-outlined text-[20px]">crisis_alert</span>Threat Warnings
+          data-path="detection-insights" href="#insights-card">
+          <span class="material-symbols-outlined text-[20px]">query_stats</span>4. Detection Insights
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
-          data-path="gis-sensor-matrix" href="#">
-          <span class="material-symbols-outlined text-[20px]">satellite_alt</span>Sensor Array
+          data-path="session-analytics" href="#analytics-card">
+          <span class="material-symbols-outlined text-[20px]">monitoring</span>5. Session Analytics
+        </a>
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="gis-sensor-matrix" href="#health-card">
+          <span class="material-symbols-outlined text-[20px]">satellite_alt</span>6. Live Server Health
+        </a>
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="batch-processing" href="#batch-card">
+          <span class="material-symbols-outlined text-[20px]">stacks</span>7. Batch Processing
+        </a>
+        <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
+          data-path="kaggle-benchmark" href="#kaggle-card">
+          <span class="material-symbols-outlined text-[20px]">dataset</span>8. Kaggle Benchmark
         </a>
         <a class="flex items-center gap-space-sm px-space-md py-2 rounded text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all font-body-md text-body-md"
           data-path="audit-reports" href="#failure-modes-card">
-          <span class="material-symbols-outlined text-[20px]">assessment</span>Audit Reports
+          <span class="material-symbols-outlined text-[20px]">assessment</span>9. Audit &amp; Limitations
         </a>
       </nav>
 
@@ -303,7 +315,7 @@
       <div class="flex items-center justify-between">
         <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono uppercase">L2 Engine</span>
         <span class="font-label-data-sm text-label-data-sm text-primary font-mono"
-          id="l2-engine-status">DEEPFOREST</span>
+          id="l2-engine-status">SPECTRAL</span>
       </div>
       <div class="flex items-center justify-between">
         <span class="font-label-data-sm text-label-data-sm text-on-surface-variant font-mono uppercase">Latency</span>
@@ -324,13 +336,13 @@
               <div
                 class="flex items-center gap-space-xs px-space-sm py-1 bg-surface-container-high rounded text-primary">
                 <span class="material-symbols-outlined text-[18px]">satellite_alt</span>
-                <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider font-semibold">Sensor
-                  Payload: Sentinel-2B / UAV Ortho</span>
+                <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider font-semibold" id="hud-source-label">Source:
+                  --</span>
               </div>
               <div
                 class="hidden sm:flex items-center gap-1.5 font-label-data-sm text-label-data-sm text-on-surface-variant">
-                <span>Projection:</span>
-                <span class="text-on-surface font-mono">EPSG:32645 (WGS 84 / UTM Zone 45N)</span>
+                <span>Approx. Projection:</span>
+                <span class="text-on-surface font-mono" id="hud-projection-text">--</span>
               </div>
             </div>
             <div class="flex items-center gap-space-md">
@@ -347,6 +359,46 @@
               <span class="font-label-data-sm text-label-data-sm text-on-surface-variant">Engine: <strong
                   class="text-on-surface font-mono">CN-v3.4.1b / Spectral-ExG</strong></span>
             </div>
+          </div>
+
+          <!-- How This Works: real end-to-end pipeline, not marketing copy -->
+          <div class="flex flex-col bg-surface-container-low/70 border border-outline-variant/20 rounded-xl p-space-md gap-space-sm">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[18px]">route</span>
+              <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline font-semibold">How
+                This Works - Real Pipeline, No Static Data</span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-center">
+              <a href="#aerial-canvas-wrapper" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">1</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Load a tile (upload or sample)</span>
+              </a>
+              <a href="#aerial-canvas-wrapper" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">2</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">ExG spectral crown detection runs server-side</span>
+              </a>
+              <a href="#telemetry-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">3</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Canopy/carbon metrics computed live</span>
+              </a>
+              <a href="#change-detection-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">4</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Compare surveys, get a risk score</span>
+              </a>
+              <a href="#insights-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">5</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Inspect confidence/size/GSD sensitivity</span>
+              </a>
+              <a href="#batch-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">6</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Scale up with batch processing</span>
+              </a>
+              <a href="#kaggle-card" class="flex flex-col items-center gap-1 p-2 rounded hover:bg-surface-container transition-all">
+                <span class="w-6 h-6 flex items-center justify-center rounded-full bg-primary/15 text-primary text-[11px] font-bold">7</span>
+                <span class="font-body-sm text-[11px] text-on-surface-variant">Validate against a real Kaggle dataset</span>
+              </a>
+            </div>
+            <span class="font-body-sm text-[11px] text-on-surface-variant">Every number on this page is computed from the actual image processed, this session's real local analytics log, live server metrics, or a real downloaded dataset - nothing below is hardcoded.</span>
           </div>
 
           <!-- Main Operational Workspace Grid -->
@@ -392,9 +444,9 @@
                   <span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">check_circle</span>
                   <div class="flex flex-col min-w-0">
                     <span class="font-label-data-sm text-label-data-sm text-on-surface font-mono truncate font-medium"
-                      id="loaded-tile-name">Tile_WB_Sundarbans_2024_08.tif</span>
+                      id="loaded-tile-name">Loading...</span>
                     <span class="font-label-data-sm text-label-data-sm text-on-surface-variant"
-                      id="loaded-tile-info">18.4 MB • 4K Orthomosaic 0.20m GSD</span>
+                      id="loaded-tile-info">--</span>
                   </div>
                 </div>
               </div>
@@ -476,6 +528,15 @@
                   <input id="chk-heatmap"
                     class="w-4 h-4 rounded accent-primary bg-surface-container-lowest cursor-pointer" type="checkbox" />
                 </label>
+                <!-- Heatmap Mode (only meaningful when the heatmap toggle above is on) -->
+                <div class="flex items-center justify-between px-2 -mt-1">
+                  <span class="font-label-data-sm text-[11px] text-on-surface-variant">Heatmap Mode</span>
+                  <select id="heatmap-mode-select"
+                    class="bg-surface-container-lowest text-on-surface font-label-data-sm text-[11px] font-mono px-2 py-1 rounded focus:outline-none focus:ring-1 focus:ring-primary">
+                    <option value="density">Density</option>
+                    <option value="confidence">Confidence (Uncertainty)</option>
+                  </select>
+                </div>
                 <!-- Toggle 3 -->
                 <label
                   class="flex items-center justify-between p-2 rounded bg-surface-container/60 hover:bg-surface-container cursor-pointer transition-all">
@@ -502,6 +563,32 @@
                   <span class="material-symbols-outlined text-[18px] text-primary">ios_share</span>
                   <span>Export GeoJSON / CSV Report</span>
                 </button>
+                <button id="btn-pdf-report-action"
+                  class="w-full flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface py-2 px-space-md rounded font-body-sm text-body-sm font-medium transition-all"
+                  type="button">
+                  <span class="material-symbols-outlined text-[18px] text-primary">picture_as_pdf</span>
+                  <span id="btn-pdf-report-text">Download Audit Report (PDF)</span>
+                </button>
+              </div>
+
+              <!-- Region of Interest Tool -->
+              <div class="flex flex-col gap-2 pt-space-sm border-t border-surface-container-highest mt-1">
+                <span
+                  class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline font-semibold">Region
+                  of Interest</span>
+                <div class="flex gap-2">
+                  <button id="btn-roi-draw" type="button"
+                    class="flex-1 flex items-center justify-center gap-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface py-2 px-2 rounded font-body-sm text-body-sm font-medium transition-all">
+                    <span class="material-symbols-outlined text-[16px] text-primary" id="btn-roi-draw-icon">draw</span>
+                    <span id="btn-roi-draw-text">Draw ROI</span>
+                  </button>
+                  <button id="btn-roi-clear" type="button"
+                    class="flex items-center justify-center gap-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface-variant py-2 px-3 rounded font-body-sm text-body-sm font-medium transition-all">
+                    <span class="material-symbols-outlined text-[16px]">clear</span>
+                  </button>
+                </div>
+                <span class="font-body-sm text-body-sm text-on-surface-variant text-[11px]" id="roi-status-text">No ROI
+                  set - analyzing full tile.</span>
               </div>
             </aside>
 
@@ -565,6 +652,10 @@
                     class="absolute inset-0 w-full h-full object-cover transition-all duration-300 ease-out" src=""
                     data-default-sample="Sundarbans_Sector_4B.png" />
 
+                  <!-- Region of Interest drawing canvas (pointer-events enabled only while drawing) -->
+                  <canvas id="roi-canvas" class="absolute inset-0 w-full h-full z-20"
+                    style="pointer-events:none;"></canvas>
+
                   <!-- Dynamic SVG Geospatial Bounding Vector Layer (populated or overlaid by backend) -->
                   <svg id="dynamic-svg-layer" class="absolute inset-0 w-full h-full pointer-events-none"
                     preserveAspectRatio="none" viewBox="0 0 800 600">
@@ -615,18 +706,12 @@
                     <span class="text-on-surface-variant font-mono" id="hud-conf-status">Conf: ≥0.40</span>
                   </div>
 
-                  <!-- Bottom-Right Mode Selector Tabs -->
+                  <!-- Active Imagery Mode (single real mode - RGB orthomosaic) -->
                   <div
                     class="absolute bottom-3 right-3 flex items-center bg-surface-container-lowest/90 backdrop-blur-md p-1 rounded shadow-lg">
-                    <button
-                      class="px-2.5 py-1 rounded bg-primary text-on-primary font-label-data-sm text-[11px] font-semibold"
-                      type="button">RGB Ortho</button>
-                    <button
-                      class="px-2.5 py-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-data-sm text-[11px] transition-colors"
-                      type="button">NDVI</button>
-                    <button
-                      class="px-2.5 py-1 rounded hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-label-data-sm text-[11px] transition-colors"
-                      type="button">CHM</button>
+                    <span
+                      class="px-2.5 py-1 rounded bg-primary text-on-primary font-label-data-sm text-[11px] font-semibold">RGB
+                      Ortho</span>
                   </div>
                 </div>
 
@@ -639,7 +724,7 @@
                   </div>
                   <div class="flex items-center gap-1.5 text-primary">
                     <span class="material-symbols-outlined text-[16px]">verified</span>
-                    <span id="hud-gpu-status">GPU Accelerated TensorRT</span>
+                    <span id="hud-gpu-status">CPU (OpenCV Spectral Engine)</span>
                   </div>
                 </div>
               </div>
@@ -768,15 +853,14 @@
                           class="text-body-sm font-normal text-on-surface-variant">t CO₂e</span></span>
                     </div>
                     <div class="w-full bg-surface-container-lowest h-2 rounded-full overflow-hidden flex">
-                      <div id="agb-bar-fill" class="bg-primary h-full transition-all duration-500" style="width: 78%"
-                        title="Sundarban Mangrove Allometric Model"></div>
-                      <div class="bg-secondary h-full transition-all duration-500" style="width: 22%"
-                        title="Understory Variance"></div>
+                      <div id="agb-bar-fill" class="bg-primary h-full transition-all duration-500" style="width: 0%"
+                        title="Canopy cover percentage (real, computed per analysis)"></div>
+                      <div id="agb-bar-remainder" class="bg-surface-container-highest h-full transition-all duration-500" style="width: 100%"></div>
                     </div>
                     <div
                       class="flex justify-between items-center font-label-data-sm text-[10px] text-outline font-mono">
-                      <span>Mangrove Allometry (Chave 2014)</span>
-                      <span id="display-confidence-variance">Confidence ±4.2%</span>
+                      <span>Pantropical Allometry (Chave 2014)</span>
+                      <span id="display-confidence-variance">Dry Biomass: -- t</span>
                     </div>
                   </div>
                 </div>
@@ -839,13 +923,317 @@
                       <span
                         class="material-symbols-outlined text-on-surface-variant text-[14px] shrink-0 mt-0.5">verified_user</span>
                       <span><strong>Recommendation:</strong> Verify boundary zones with ground-truth plot sampling.
-                        Kolkata Hackathon Evaluation Build.</span>
+                        Classical spectral engine - see the Kaggle Benchmark panel below for real detection statistics on public datasets.</span>
                     </div>
                   </div>
                 </div>
 
               </div>
             </section>
+          </div>
+
+          <!-- Canopy Change Detection (Before / After) -->
+          <div class="flex flex-col bg-surface-container-low/90 backdrop-blur-md p-space-md rounded-xl shadow-md gap-space-md"
+            id="change-detection-card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[20px]">compare</span>
+                <h2 class="font-headline-md text-headline-md text-on-surface text-[17px] leading-tight">Canopy Change
+                  Detection</h2>
+              </div>
+              <span class="font-label-data-sm text-label-data-sm text-on-surface-variant">Compare two surveys of the
+                same site</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+              <div class="flex flex-col gap-1.5">
+                <label class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">Before
+                  (Sample A)</label>
+                <select id="change-sample-a"
+                  class="w-full bg-surface-container-lowest text-on-surface font-body-sm text-body-sm px-3 py-2 rounded focus:outline-none focus:ring-1 focus:ring-primary"></select>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline">After
+                  (Sample B)</label>
+                <select id="change-sample-b"
+                  class="w-full bg-surface-container-lowest text-on-surface font-body-sm text-body-sm px-3 py-2 rounded focus:outline-none focus:ring-1 focus:ring-primary"></select>
+              </div>
+            </div>
+            <button id="btn-compare-action" type="button"
+              class="w-full md:w-auto self-start flex items-center justify-center gap-2 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary py-2.5 px-space-lg rounded font-body-md text-body-md font-semibold transition-all shadow-md active:scale-[0.99]">
+              <span class="material-symbols-outlined text-[20px]" id="btn-compare-icon">compare_arrows</span>
+              <span id="btn-compare-text">Run Comparison</span>
+            </button>
+
+            <div id="change-results" class="hidden flex-col gap-space-md">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-space-md items-start">
+                <div class="rounded-lg overflow-hidden bg-surface-container-lowest aspect-[4/3]">
+                  <img id="change-overlay-img" class="w-full h-full object-cover transition-opacity duration-300 ease-out" alt="Canopy change overlay: red = loss, green = gain" src="" />
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                    <span class="font-label-data-sm text-[11px] uppercase text-outline">Canopy Loss</span>
+                    <span class="font-headline-lg text-[20px] font-bold font-mono text-secondary" id="change-loss-m2">0 m²</span>
+                  </div>
+                  <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                    <span class="font-label-data-sm text-[11px] uppercase text-outline">Canopy Gain</span>
+                    <span class="font-headline-lg text-[20px] font-bold font-mono text-primary" id="change-gain-m2">0 m²</span>
+                  </div>
+                  <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                    <span class="font-label-data-sm text-[11px] uppercase text-outline">Net Change</span>
+                    <span class="font-headline-lg text-[20px] font-bold font-mono text-on-surface" id="change-net-m2">0 m²</span>
+                  </div>
+                  <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                    <span class="font-label-data-sm text-[11px] uppercase text-outline">Net CO₂e</span>
+                    <span class="font-headline-lg text-[20px] font-bold font-mono text-on-surface" id="change-co2e">0 t</span>
+                  </div>
+                  <div class="bg-surface-container p-3 rounded-lg flex flex-col sm:col-span-2">
+                    <span class="font-label-data-sm text-[11px] uppercase text-outline">Deforestation Risk (transparent formula, not a black-box model)</span>
+                    <div class="flex items-baseline gap-2">
+                      <span class="font-headline-lg text-[20px] font-bold font-mono text-on-surface" id="change-risk-score">0</span>
+                      <span class="font-label-data-sm text-[12px] px-2 py-0.5 rounded bg-primary/10 text-primary" id="change-risk-band">--</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <span class="font-body-sm text-[11px] text-on-surface-variant">Overlay: red = canopy loss, green = canopy gain. Assumes both tiles frame the same site extent (no georectification is performed beyond a resize).</span>
+            </div>
+          </div>
+
+          <!-- Detection Insights: real charts computed client-side from the last analysis response -->
+          <div class="flex flex-col bg-surface-container-low/90 backdrop-blur-md p-space-md rounded-xl shadow-md gap-space-md"
+            id="insights-card">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">query_stats</span>
+              <h2 class="font-headline-md text-headline-md text-on-surface text-[17px] leading-tight">Detection Insights</h2>
+              <span class="font-label-data-sm text-[11px] text-on-surface-variant">Computed live from the current analysis - no static data</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+              <div class="flex flex-col gap-1.5 bg-surface-container p-3 rounded-lg">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Confidence Score Distribution</span>
+                <canvas id="chart-score-hist" class="w-full" height="120"></canvas>
+              </div>
+              <div class="flex flex-col gap-1.5 bg-surface-container p-3 rounded-lg">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Crown Size Distribution (m)</span>
+                <canvas id="chart-size-hist" class="w-full" height="120"></canvas>
+              </div>
+              <div class="flex flex-col gap-1.5 bg-surface-container p-3 rounded-lg">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Processing Time (rolling, ms)</span>
+                <canvas id="chart-time-series" class="w-full" height="120"></canvas>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+              <div class="flex flex-col gap-2 bg-surface-container p-3 rounded-lg">
+                <div class="flex items-center justify-between">
+                  <span class="font-label-data-sm text-[11px] uppercase text-outline">GSD Sensitivity Simulator</span>
+                  <button id="btn-gsd-sim" type="button"
+                    class="flex items-center gap-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-[11px] font-medium py-1 px-2.5 rounded transition-all">
+                    <span class="material-symbols-outlined text-[14px]">tune</span> Simulate
+                  </button>
+                </div>
+                <canvas id="chart-gsd-sim" class="w-full" height="120"></canvas>
+                <span class="font-body-sm text-[10px] text-on-surface-variant">Recomputes carbon/area from the already-detected crowns across a GSD range - pure math, no re-detection.</span>
+              </div>
+              <div class="flex flex-col gap-2 bg-surface-container p-3 rounded-lg">
+                <div class="flex items-center justify-between">
+                  <span class="font-label-data-sm text-[11px] uppercase text-outline">Threshold Sensitivity Sweep</span>
+                  <button id="btn-sensitivity-sweep" type="button"
+                    class="flex items-center gap-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-[11px] font-medium py-1 px-2.5 rounded transition-all">
+                    <span class="material-symbols-outlined text-[14px]">insights</span> Run Sweep
+                  </button>
+                </div>
+                <canvas id="chart-sensitivity" class="w-full" height="120"></canvas>
+                <span class="font-body-sm text-[10px] text-on-surface-variant">Single contour pass, bucketed at multiple thresholds (point count set by your detected hardware tier).</span>
+              </div>
+            </div>
+
+            <button id="btn-download-worldfile" type="button"
+              class="w-full md:w-auto self-start flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface py-2 px-space-md rounded font-body-sm text-body-sm font-medium transition-all">
+              <span class="material-symbols-outlined text-[18px] text-primary">map</span>
+              <span>Download QGIS World File (.pgw)</span>
+            </button>
+          </div>
+
+          <!-- Session Analytics: real cumulative counters from this instance's SQLite log -->
+          <div class="flex flex-col bg-surface-container-low/90 backdrop-blur-md p-space-md rounded-xl shadow-md gap-space-md"
+            id="analytics-card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[20px]">monitoring</span>
+                <h2 class="font-headline-md text-headline-md text-on-surface text-[17px] leading-tight">Session Analytics</h2>
+              </div>
+              <button id="btn-export-analytics" type="button"
+                class="flex items-center gap-1 bg-surface-container hover:bg-surface-container-high text-on-surface text-[11px] font-medium py-1 px-2.5 rounded transition-all">
+                <span class="material-symbols-outlined text-[14px]">download</span> Export JSON
+              </button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+              <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Total Runs</span>
+                <span class="font-headline-lg text-[20px] font-bold font-mono text-on-surface" id="stat-total-runs">--</span>
+              </div>
+              <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Total Trees Counted</span>
+                <span class="font-headline-lg text-[20px] font-bold font-mono text-on-surface" id="stat-total-trees">--</span>
+              </div>
+              <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Total Canopy Audited</span>
+                <span class="font-headline-lg text-[20px] font-bold font-mono text-on-surface" id="stat-total-canopy">--</span>
+              </div>
+              <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Total CO₂e Assessed</span>
+                <span class="font-headline-lg text-[20px] font-bold font-mono text-primary" id="stat-total-co2e">--</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+              <div class="flex flex-col gap-1.5 bg-surface-container p-3 rounded-lg">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Canopy Cover Trend (this session's real history)</span>
+                <canvas id="chart-history-trend" class="w-full" height="120"></canvas>
+              </div>
+              <div class="flex flex-col gap-1.5 bg-surface-container p-3 rounded-lg overflow-x-auto">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Site Leaderboard (by CO₂e)</span>
+                <table class="w-full text-[11px] font-mono mt-1">
+                  <thead>
+                    <tr class="text-outline text-left">
+                      <th class="pb-1">File</th>
+                      <th class="pb-1 text-right">Trees</th>
+                      <th class="pb-1 text-right">Cover%</th>
+                      <th class="pb-1 text-right">CO₂e (t)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="leaderboard-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live System Health: proves the hardware-adaptive/RAM budget claims -->
+          <div class="flex flex-col bg-surface-container-low/90 backdrop-blur-md p-space-md rounded-xl shadow-md gap-space-md"
+            id="health-card">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">monitor_heart</span>
+              <h2 class="font-headline-md text-headline-md text-on-surface text-[17px] leading-tight">Live Server Health</h2>
+              <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+              <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Hardware Tier</span>
+                <span class="font-headline-lg text-[16px] font-bold font-mono text-on-surface" id="health-tier">--</span>
+              </div>
+              <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Process RAM</span>
+                <span class="font-headline-lg text-[16px] font-bold font-mono text-on-surface" id="health-ram">--</span>
+              </div>
+              <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Host CPU</span>
+                <span class="font-headline-lg text-[16px] font-bold font-mono text-on-surface" id="health-cpu">--</span>
+              </div>
+              <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">Uptime</span>
+                <span class="font-headline-lg text-[16px] font-bold font-mono text-on-surface" id="health-uptime">--</span>
+              </div>
+              <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                <span class="font-label-data-sm text-[11px] uppercase text-outline">In-Flight Requests</span>
+                <span class="font-headline-lg text-[16px] font-bold font-mono text-on-surface" id="health-concurrency">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Batch Processing -->
+          <div class="flex flex-col bg-surface-container-low/90 backdrop-blur-md p-space-md rounded-xl shadow-md gap-space-md"
+            id="batch-card">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">stacks</span>
+              <h2 class="font-headline-md text-headline-md text-on-surface text-[17px] leading-tight">Batch Processing</h2>
+              <span class="font-label-data-sm text-[11px] text-on-surface-variant" id="batch-hint">Processes sequentially in hardware-sized chunks</span>
+            </div>
+            <input type="file" id="batch-file-input" class="hidden" accept="image/*" multiple />
+            <div class="flex items-center gap-2">
+              <button id="btn-batch-select" type="button"
+                class="flex items-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface py-2 px-space-md rounded font-body-sm text-body-sm font-medium transition-all">
+                <span class="material-symbols-outlined text-[18px] text-primary">upload_file</span>
+                <span id="batch-select-text">Select Multiple Images</span>
+              </button>
+              <button id="btn-batch-run" type="button" disabled
+                class="flex items-center gap-2 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary py-2 px-space-md rounded font-body-sm text-body-sm font-semibold transition-all disabled:opacity-40">
+                <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                <span id="batch-run-text">Run Batch</span>
+              </button>
+            </div>
+            <div id="batch-results" class="hidden flex-col gap-2">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                  <span class="font-label-data-sm text-[11px] uppercase text-outline">Processed</span>
+                  <span class="font-headline-lg text-[18px] font-bold font-mono text-on-surface" id="batch-processed">0</span>
+                </div>
+                <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                  <span class="font-label-data-sm text-[11px] uppercase text-outline">Total Trees</span>
+                  <span class="font-headline-lg text-[18px] font-bold font-mono text-on-surface" id="batch-trees">0</span>
+                </div>
+                <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                  <span class="font-label-data-sm text-[11px] uppercase text-outline">Total Canopy m²</span>
+                  <span class="font-headline-lg text-[18px] font-bold font-mono text-on-surface" id="batch-canopy">0</span>
+                </div>
+                <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                  <span class="font-label-data-sm text-[11px] uppercase text-outline">Total CO₂e</span>
+                  <span class="font-headline-lg text-[18px] font-bold font-mono text-primary" id="batch-co2e">0</span>
+                </div>
+              </div>
+              <button id="btn-batch-export-csv" type="button"
+                class="w-full md:w-auto self-start flex items-center justify-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface py-1.5 px-space-md rounded font-body-sm text-[12px] font-medium transition-all">
+                <span class="material-symbols-outlined text-[16px] text-primary">table_view</span>
+                Export Batch CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Kaggle Dataset Benchmark -->
+          <div class="flex flex-col bg-surface-container-low/90 backdrop-blur-md p-space-md rounded-xl shadow-md gap-space-md"
+            id="kaggle-card">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">dataset</span>
+              <h2 class="font-headline-md text-headline-md text-on-surface text-[17px] leading-tight">Kaggle Dataset Benchmark</h2>
+            </div>
+            <p class="font-body-sm text-[12px] text-on-surface-variant" id="kaggle-status-text">Checking Kaggle credentials...</p>
+            <div class="flex flex-col md:flex-row gap-2" id="kaggle-controls" style="display:none;">
+              <select id="kaggle-dataset-select"
+                class="flex-1 bg-surface-container-lowest text-on-surface font-body-sm text-body-sm px-3 py-2 rounded focus:outline-none focus:ring-1 focus:ring-primary"></select>
+              <button id="btn-kaggle-run" type="button"
+                class="flex items-center justify-center gap-2 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary py-2 px-space-lg rounded font-body-sm text-body-sm font-semibold transition-all">
+                <span class="material-symbols-outlined text-[18px]" id="btn-kaggle-icon">play_arrow</span>
+                <span id="btn-kaggle-text">Run Benchmark</span>
+              </button>
+            </div>
+            <div id="kaggle-results" class="hidden flex-col gap-2">
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                  <span class="font-label-data-sm text-[11px] uppercase text-outline">Images Sampled</span>
+                  <span class="font-headline-lg text-[18px] font-bold font-mono text-on-surface" id="kaggle-sampled">0</span>
+                </div>
+                <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                  <span class="font-label-data-sm text-[11px] uppercase text-outline">Avg Tree Count</span>
+                  <span class="font-headline-lg text-[18px] font-bold font-mono text-on-surface" id="kaggle-avg-trees">0</span>
+                </div>
+                <div class="bg-surface-container p-3 rounded-lg flex flex-col">
+                  <span class="font-label-data-sm text-[11px] uppercase text-outline">Avg Canopy Cover</span>
+                  <span class="font-headline-lg text-[18px] font-bold font-mono text-on-surface" id="kaggle-avg-cover">0%</span>
+                </div>
+              </div>
+              <span class="font-body-sm text-[11px] text-on-surface-variant" id="kaggle-note"></span>
+            </div>
+
+            <div class="flex flex-col gap-2 pt-2 border-t border-surface-container-highest/50" id="kaggle-browse-section" style="display:none;">
+              <div class="flex items-center justify-between">
+                <span class="font-label-data-sm text-label-data-sm uppercase tracking-wider text-outline font-semibold">Browse
+                  &amp; Analyze an Individual Image</span>
+                <button id="btn-kaggle-load-images" type="button"
+                  class="flex items-center gap-1 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-[11px] font-medium py-1 px-2.5 rounded transition-all">
+                  <span class="material-symbols-outlined text-[14px]">refresh</span> Load Real Images
+                </button>
+              </div>
+              <span class="font-body-sm text-[11px] text-on-surface-variant">Pick any real image straight from this dataset and run it through the exact same detection pipeline as an upload - full annotated preview, telemetry, exports, all of it.</span>
+              <div id="kaggle-image-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -901,6 +1289,98 @@
     const orthoImg = document.getElementById('aerial-ortho-img');
     orthoImg.src = `${API_BASE}/sample_images/${orthoImg.dataset.defaultSample}`;
     const loadingSpinner = document.getElementById('loading-spinner');
+    const heatmapModeSelect = document.getElementById('heatmap-mode-select');
+
+    // --- Region of Interest (ROI) drawing tool ---
+    // Points are stored normalized (0-1) so they stay valid regardless of the
+    // rendered canvas size (zoom/resize/fullscreen).
+    const roiCanvas = document.getElementById('roi-canvas');
+    const roiCtx = roiCanvas.getContext('2d');
+    const aerialWrapper = document.getElementById('aerial-canvas-wrapper');
+    const btnRoiDraw = document.getElementById('btn-roi-draw');
+    const btnRoiDrawText = document.getElementById('btn-roi-draw-text');
+    const btnRoiDrawIcon = document.getElementById('btn-roi-draw-icon');
+    const btnRoiClear = document.getElementById('btn-roi-clear');
+    const roiStatusText = document.getElementById('roi-status-text');
+    let roiPoints = [];
+    let roiDrawingActive = false;
+
+    function resizeRoiCanvas() {
+      roiCanvas.width = aerialWrapper.clientWidth;
+      roiCanvas.height = aerialWrapper.clientHeight;
+      redrawRoi();
+    }
+    window.addEventListener('resize', resizeRoiCanvas);
+    resizeRoiCanvas();
+
+    function redrawRoi() {
+      roiCtx.clearRect(0, 0, roiCanvas.width, roiCanvas.height);
+      if (roiPoints.length === 0) return;
+      roiCtx.strokeStyle = '#6ffbbe';
+      roiCtx.fillStyle = 'rgba(16, 185, 129, 0.18)';
+      roiCtx.lineWidth = 2;
+      roiCtx.beginPath();
+      roiPoints.forEach(([nx, ny], i) => {
+        const x = nx * roiCanvas.width;
+        const y = ny * roiCanvas.height;
+        if (i === 0) roiCtx.moveTo(x, y); else roiCtx.lineTo(x, y);
+      });
+      if (roiPoints.length >= 3) roiCtx.closePath();
+      roiCtx.fill();
+      roiCtx.stroke();
+      roiPoints.forEach(([nx, ny]) => {
+        roiCtx.beginPath();
+        roiCtx.fillStyle = '#6ffbbe';
+        roiCtx.arc(nx * roiCanvas.width, ny * roiCanvas.height, 4, 0, Math.PI * 2);
+        roiCtx.fill();
+      });
+    }
+
+    function updateRoiStatus() {
+      if (roiPoints.length >= 3) {
+        roiStatusText.textContent = `ROI active - ${roiPoints.length} vertices constraining detection.`;
+      } else if (roiDrawingActive) {
+        roiStatusText.textContent = `Click on the image to add vertices (${roiPoints.length} so far, need 3+).`;
+      } else {
+        roiStatusText.textContent = 'No ROI set - analyzing full tile.';
+      }
+    }
+
+    btnRoiDraw.addEventListener('click', () => {
+      roiDrawingActive = !roiDrawingActive;
+      roiCanvas.style.pointerEvents = roiDrawingActive ? 'auto' : 'none';
+      roiCanvas.style.cursor = roiDrawingActive ? 'crosshair' : 'default';
+      btnRoiDrawText.textContent = roiDrawingActive ? 'Finish ROI' : 'Draw ROI';
+      btnRoiDrawIcon.textContent = roiDrawingActive ? 'check' : 'draw';
+      if (!roiDrawingActive && roiPoints.length >= 3) {
+        showToast('ROI set - re-run analysis to apply it.', 'success');
+        runCanopyDetection();
+      } else if (!roiDrawingActive && roiPoints.length > 0 && roiPoints.length < 3) {
+        roiPoints = [];
+        redrawRoi();
+      }
+      updateRoiStatus();
+    });
+
+    roiCanvas.addEventListener('click', (e) => {
+      if (!roiDrawingActive) return;
+      const rect = roiCanvas.getBoundingClientRect();
+      roiPoints.push([(e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height]);
+      redrawRoi();
+      updateRoiStatus();
+    });
+
+    btnRoiClear.addEventListener('click', () => {
+      roiPoints = [];
+      roiDrawingActive = false;
+      roiCanvas.style.pointerEvents = 'none';
+      roiCanvas.style.cursor = 'default';
+      btnRoiDrawText.textContent = 'Draw ROI';
+      btnRoiDrawIcon.textContent = 'draw';
+      redrawRoi();
+      updateRoiStatus();
+      runCanopyDetection();
+    });
 
     // Drag and drop & upload handling
     uploadBox.addEventListener('click', () => fileInput.click());
@@ -919,12 +1399,43 @@
       }
     });
 
+    // Real per-sample origin - null means "no known real-world location" (raw
+    // uploads, Kaggle images, and synthetic/illustrative samples all stay null;
+    // only samples with genuine published coordinates, e.g. the real NEON
+    // OSBS/SOAP benchmarks, get real numbers here). Never defaults to a fake place.
+    let activeOriginLat = null;
+    let activeOriginLon = null;
+    let sampleCatalog = [];
+
+    function applySampleMeta(s) {
+      activeSample = s.filename;
+      activeOriginLat = s.lat;   // null for synthetic/illustrative samples - honest, not faked
+      activeOriginLon = s.lon;
+      uploadedFileObj = null;
+      activeKaggleDatasetSlug = null;
+      activeKaggleFilename = null;
+      gsdInput.value = s.recommended_gsd.toFixed(2);
+      document.getElementById('loaded-tile-name').innerText = s.filename;
+      document.getElementById('loaded-tile-info').innerText = `${s.size_mb} MB • ${s.meta}`;
+      document.getElementById('header-sector-name').innerText = s.meta.split('•')[0].trim();
+      document.getElementById('header-coords-val').innerText = s.coords;
+      document.getElementById('hud-coordinates-text').innerText = s.coords;
+      document.getElementById('hud-source-label').innerText = `Source: ${s.filename}${s.is_synthetic ? ' (synthetic)' : ''}`;
+      document.getElementById('hud-projection-text').innerText = s.epsg ? `${s.epsg} (${s.utm_zone})` : s.utm_zone;
+    }
+
     function processFileInput(file) {
       uploadedFileObj = file;
       activeSample = null;
+      activeOriginLat = null;
+      activeOriginLon = null;
+      activeKaggleDatasetSlug = null;
+      activeKaggleFilename = null;
       document.getElementById('loaded-tile-name').innerText = file.name;
       document.getElementById('loaded-tile-info').innerText = `${(file.size / (1024 * 1024)).toFixed(2)} MB • Custom Orthomosaic Ingestion`;
       document.getElementById('header-sector-name').innerText = file.name;
+      document.getElementById('hud-source-label').innerText = `Source: ${file.name} (uploaded - location unknown)`;
+      document.getElementById('hud-projection-text').innerText = 'Not georeferenced';
       runCanopyDetection();
     }
 
@@ -933,6 +1444,7 @@
       try {
         const res = await fetch(`${API_BASE}/api/samples`);
         const data = await res.json();
+        sampleCatalog = data.samples;
         const navContainer = document.getElementById('sample-buttons-nav');
         navContainer.innerHTML = '';
         data.samples.forEach(s => {
@@ -944,19 +1456,17 @@
             <span class="text-[10px] font-mono text-outline">${s.size_mb}M</span>
           `;
           btn.onclick = () => {
-            activeSample = s.filename;
-            uploadedFileObj = null;
-            gsdInput.value = s.recommended_gsd.toFixed(2);
-            document.getElementById('loaded-tile-name').innerText = s.filename;
-            document.getElementById('loaded-tile-info').innerText = `${s.size_mb} MB • ${s.meta}`;
-            document.getElementById('header-sector-name').innerText = s.meta.split('•')[0].trim();
-            document.getElementById('header-coords-val').innerText = s.coords;
-            document.getElementById('hud-coordinates-text').innerText = s.coords;
+            applySampleMeta(s);
             loadSampleOptions();
             runCanopyDetection();
           };
           navContainer.appendChild(btn);
         });
+        // Populate the real tile-info box for the initial default sample too -
+        // previously this only happened on a manual click, so the box showed
+        // stale placeholder text through the very first (auto-triggered) analysis.
+        const initial = data.samples.find(s => s.filename === activeSample);
+        if (initial) applySampleMeta(initial);
       } catch (err) {
         console.error('Failed to load samples:', err);
       }
@@ -972,7 +1482,10 @@
       document.getElementById('analyze-action-icon').classList.add('animate-spin');
 
       const formData = new FormData();
-      if (uploadedFileObj) {
+      if (activeKaggleDatasetSlug && activeKaggleFilename) {
+        formData.append('kaggle_dataset_slug', activeKaggleDatasetSlug);
+        formData.append('kaggle_filename', activeKaggleFilename);
+      } else if (uploadedFileObj) {
         formData.append('file', uploadedFileObj);
       } else if (activeSample) {
         formData.append('sample_filename', activeSample);
@@ -982,6 +1495,17 @@
       formData.append('show_boxes', chkBoxes.checked);
       formData.append('show_heatmap', chkHeatmap.checked);
       formData.append('show_centroids', chkCentroids.checked);
+      formData.append('heatmap_mode', heatmapModeSelect.value);
+      // Only send a location when one is actually known - omitting the field
+      // (rather than sending a placeholder) is what tells the backend not to
+      // fabricate a projection/EPSG claim for this image.
+      if (activeOriginLat !== null && activeOriginLon !== null) {
+        formData.append('origin_lat', activeOriginLat);
+        formData.append('origin_lon', activeOriginLon);
+      }
+      if (roiPoints.length >= 3) {
+        formData.append('roi_geojson', JSON.stringify(roiPoints));
+      }
 
       try {
         const response = await fetch(`${API_BASE}/api/analyze`, {
@@ -1053,12 +1577,20 @@
       carbonEl.innerHTML = `${m.inferred_co2e_tons.toLocaleString()} <span class="text-body-sm font-normal text-on-surface-variant">t CO₂e</span>`;
       flashUpdate(carbonEl);
       document.getElementById('display-confidence-variance').innerText = `Dry Biomass: ${m.estimated_agb_tons} t`;
+      document.getElementById('agb-bar-fill').style.width = `${Math.min(100, m.canopy_cover_percentage)}%`;
+      document.getElementById('agb-bar-remainder').style.width = `${Math.max(0, 100 - m.canopy_cover_percentage)}%`;
 
       // Update FOV & HUD scale
       const fovWidth = Math.round(data.dimensions.width * m.gsd);
       const fovHeight = Math.round(data.dimensions.height * m.gsd);
       document.getElementById('hud-fov-val').innerText = `${fovWidth}m x ${fovHeight}m`;
       document.getElementById('hud-scale-text').innerText = `${Math.round(fovWidth * 0.15)}m`;
+
+      // Real per-image projection, computed server-side from this image's actual
+      // origin coordinates - not a single fixed zone shown for every image.
+      if (data.projection_label) {
+        document.getElementById('hud-projection-text').innerText = data.projection_label;
+      }
     }
 
     // Attach listeners
@@ -1108,8 +1640,508 @@
       }
     });
 
+    // PDF audit report download - re-runs the same analysis server-side (stateless).
+    document.getElementById('btn-pdf-report-action').addEventListener('click', async () => {
+      const btnText = document.getElementById('btn-pdf-report-text');
+      const original = btnText.textContent;
+      btnText.textContent = 'Generating PDF...';
+      try {
+        const formData = new FormData();
+        if (activeKaggleDatasetSlug && activeKaggleFilename) {
+          formData.append('kaggle_dataset_slug', activeKaggleDatasetSlug);
+          formData.append('kaggle_filename', activeKaggleFilename);
+        } else if (uploadedFileObj) {
+          formData.append('file', uploadedFileObj);
+        } else if (activeSample) {
+          formData.append('sample_filename', activeSample);
+        }
+        formData.append('confidence', confSlider.value);
+        formData.append('gsd', gsdInput.value);
+        formData.append('show_boxes', chkBoxes.checked);
+        formData.append('show_heatmap', chkHeatmap.checked);
+        formData.append('show_centroids', chkCentroids.checked);
+        formData.append('heatmap_mode', heatmapModeSelect.value);
+        if (activeOriginLat !== null && activeOriginLon !== null) {
+          formData.append('origin_lat', activeOriginLat);
+          formData.append('origin_lon', activeOriginLon);
+        }
+        if (roiPoints.length >= 3) formData.append('roi_geojson', JSON.stringify(roiPoints));
+
+        const response = await fetch(`${API_BASE}/api/report`, { method: 'POST', body: formData });
+        if (!response.ok) throw new Error('Report generation failed');
+        const blob = await response.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Flora_Carbon_Audit_Report_${Date.now()}.pdf`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast('Audit report downloaded.', 'success');
+      } catch (err) {
+        console.error('PDF report failed:', err);
+        showToast('Could not generate the PDF report. Try again.', 'error');
+      } finally {
+        btnText.textContent = original;
+      }
+    });
+
+    // --- Canopy Change Detection (before / after comparison) ---
+    async function loadChangeDetectionSamples() {
+      try {
+        const res = await fetch(`${API_BASE}/api/samples`);
+        const data = await res.json();
+        const selA = document.getElementById('change-sample-a');
+        const selB = document.getElementById('change-sample-b');
+        selA.innerHTML = '';
+        selB.innerHTML = '';
+        data.samples.forEach((s, idx) => {
+          const optA = new Option(s.label, s.filename, idx === 0, idx === 0);
+          const optB = new Option(s.label, s.filename, idx === 1, idx === 1);
+          selA.add(optA);
+          selB.add(optB);
+        });
+      } catch (err) {
+        console.error('Failed to load change-detection samples:', err);
+      }
+    }
+
+    document.getElementById('btn-compare-action').addEventListener('click', async () => {
+      const btnText = document.getElementById('btn-compare-text');
+      const btnIcon = document.getElementById('btn-compare-icon');
+      const resultsPanel = document.getElementById('change-results');
+      btnText.textContent = 'Comparing...';
+      btnIcon.classList.add('animate-spin');
+      try {
+        const formData = new FormData();
+        formData.append('sample_a', document.getElementById('change-sample-a').value);
+        formData.append('sample_b', document.getElementById('change-sample-b').value);
+        formData.append('confidence', confSlider.value);
+        formData.append('gsd', gsdInput.value);
+
+        const response = await fetch(`${API_BASE}/api/compare`, { method: 'POST', body: formData });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.detail || 'Comparison failed');
+
+        resultsPanel.classList.remove('hidden');
+        resultsPanel.classList.add('flex');
+        const overlayImg = document.getElementById('change-overlay-img');
+        overlayImg.classList.add('opacity-0');
+        setTimeout(() => {
+          overlayImg.src = result.overlay_image_data;
+          overlayImg.onload = () => overlayImg.classList.remove('opacity-0');
+        }, 180);
+
+        const lossEl = document.getElementById('change-loss-m2');
+        const gainEl = document.getElementById('change-gain-m2');
+        const netEl = document.getElementById('change-net-m2');
+        const co2eEl = document.getElementById('change-co2e');
+        lossEl.textContent = `${result.canopy_loss_m2.toLocaleString()} m²`;
+        gainEl.textContent = `${result.canopy_gain_m2.toLocaleString()} m²`;
+        netEl.textContent = `${result.net_change_m2.toLocaleString()} m²`;
+        co2eEl.textContent = `${result.net_change_co2e_tons.toLocaleString()} t`;
+        document.getElementById('change-risk-score').textContent = result.risk.risk_score;
+        document.getElementById('change-risk-band').textContent = result.risk.risk_band;
+        [lossEl, gainEl, netEl, co2eEl].forEach(flashUpdate);
+
+        showToast('Change detection complete.', 'success');
+      } catch (err) {
+        console.error('Comparison failed:', err);
+        showToast('Could not complete change detection. Check your connection and try again.', 'error');
+      } finally {
+        btnText.textContent = 'Run Comparison';
+        btnIcon.classList.remove('animate-spin');
+      }
+    });
+
+    // ============================================================
+    // Detection Insights, Session Analytics, System Health, Batch,
+    // and Kaggle Benchmark - all real, computed/fetched data, no
+    // hardcoded placeholders.
+    // ============================================================
+
+    // Minimal vanilla canvas chart helpers (no external chart library needed).
+    function _prepCanvas(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(50, rect.width || canvas.parentElement.clientWidth);
+      const h = canvas.height || 120;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, w, h);
+      return { ctx, w, h };
+    }
+
+    function drawBarChart(canvasId, values, labels) {
+      const { ctx, w, h } = _prepCanvas(canvasId);
+      if (!values.length) {
+        ctx.fillStyle = '#7a8a80';
+        ctx.font = '11px monospace';
+        ctx.fillText('No data yet', 8, h / 2);
+        return;
+      }
+      const maxVal = Math.max(1, ...values);
+      const padding = 16;
+      const barW = (w - padding) / values.length;
+      values.forEach((v, i) => {
+        const barH = ((h - 18) * v) / maxVal;
+        ctx.fillStyle = '#10B981';
+        ctx.fillRect(i * barW + 2, h - barH - 14, barW - 4, barH);
+        if (labels && labels[i] !== undefined) {
+          ctx.fillStyle = '#8a9990';
+          ctx.font = '9px monospace';
+          ctx.fillText(String(labels[i]), i * barW + 2, h - 2);
+        }
+      });
+    }
+
+    function drawLineChart(canvasId, points, color = '#6ffbbe') {
+      const { ctx, w, h } = _prepCanvas(canvasId);
+      if (points.length < 2) {
+        ctx.fillStyle = '#7a8a80';
+        ctx.font = '11px monospace';
+        ctx.fillText(points.length === 0 ? 'No data yet' : 'Need more data points', 8, h / 2);
+        return;
+      }
+      const maxVal = Math.max(...points, 0.001);
+      const minVal = Math.min(...points, 0);
+      const range = Math.max(0.001, maxVal - minVal);
+      const stepX = w / (points.length - 1);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      points.forEach((p, i) => {
+        const x = i * stepX;
+        const y = h - 10 - ((p - minVal) / range) * (h - 20);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      points.forEach((p, i) => {
+        const x = i * stepX;
+        const y = h - 10 - ((p - minVal) / range) * (h - 20);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function histogramBuckets(values, bucketCount, min, max) {
+      const buckets = new Array(bucketCount).fill(0);
+      if (!values.length) return { buckets, labels: [] };
+      const lo = min !== undefined ? min : Math.min(...values);
+      const hi = max !== undefined ? max : Math.max(...values);
+      const span = Math.max(0.0001, hi - lo);
+      values.forEach(v => {
+        let idx = Math.floor(((v - lo) / span) * bucketCount);
+        idx = Math.max(0, Math.min(bucketCount - 1, idx));
+        buckets[idx]++;
+      });
+      const labels = buckets.map((_, i) => (lo + (span * i) / bucketCount).toFixed(1));
+      return { buckets, labels };
+    }
+
+    // Rolling client-side processing-time series (real values already returned
+    // per request - zero backend cost to chart these).
+    let processingTimeSeries = [];
+
+    function renderDetectionInsights(data) {
+      // Score distribution
+      const scores = (data.boxes || []).map(b => b.score);
+      const scoreHist = histogramBuckets(scores, 8, 0.1, 1.0);
+      drawBarChart('chart-score-hist', scoreHist.buckets, scoreHist.labels);
+
+      // Crown size distribution (effective diameter in meters, using returned GSD)
+      const gsd = data.metrics.gsd || 0.2;
+      const sizes = (data.boxes || []).map(b => {
+        const wPx = b.xmax - b.xmin, hPx = b.ymax - b.ymin;
+        return Math.sqrt((4 * wPx * hPx * gsd * gsd) / Math.PI);
+      });
+      const sizeHist = histogramBuckets(sizes, 8);
+      drawBarChart('chart-size-hist', sizeHist.buckets, sizeHist.labels);
+
+      // Rolling processing time
+      processingTimeSeries.push(data.inference_time_ms);
+      if (processingTimeSeries.length > 20) processingTimeSeries.shift();
+      drawLineChart('chart-time-series', processingTimeSeries);
+    }
+
+    // GSD Sensitivity Simulator
+    document.getElementById('btn-gsd-sim').addEventListener('click', async () => {
+      if (!currentInferenceResponse) return showToast('Analyze an image first.', 'error');
+      try {
+        const formData = new FormData();
+        formData.append('boxes_json', JSON.stringify(currentInferenceResponse.boxes));
+        formData.append('image_width', currentInferenceResponse.dimensions.width);
+        formData.append('image_height', currentInferenceResponse.dimensions.height);
+        formData.append('gsd_min', '0.05');
+        formData.append('gsd_max', '0.6');
+        formData.append('steps', '8');
+        const res = await fetch(`${API_BASE}/api/gsd-sensitivity`, { method: 'POST', body: formData });
+        const result = await res.json();
+        drawLineChart('chart-gsd-sim', result.curve.map(p => p.total_canopy_m2), '#a78bfa');
+        showToast('GSD sensitivity simulated.', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('GSD sensitivity simulation failed.', 'error');
+      }
+    });
+
+    // Threshold Sensitivity Sweep
+    document.getElementById('btn-sensitivity-sweep').addEventListener('click', async () => {
+      try {
+        const formData = new FormData();
+        if (uploadedFileObj) formData.append('file', uploadedFileObj);
+        else if (activeSample) formData.append('sample_filename', activeSample);
+        const res = await fetch(`${API_BASE}/api/sensitivity`, { method: 'POST', body: formData });
+        const result = await res.json();
+        if (!result.success) throw new Error('Sweep failed');
+        drawBarChart('chart-sensitivity', result.curve.map(p => p.tree_count), result.curve.map(p => p.threshold));
+        showToast('Threshold sensitivity sweep complete.', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Threshold sensitivity sweep failed.', 'error');
+      }
+    });
+
+    // QGIS World File export
+    document.getElementById('btn-download-worldfile').addEventListener('click', () => {
+      if (!currentInferenceResponse || !currentInferenceResponse.world_file_text) {
+        return showToast('Analyze an image first.', 'error');
+      }
+      triggerDownload(currentInferenceResponse.world_file_text, `Flora_Carbon_${Date.now()}.pgw`, 'text/plain');
+    });
+
+    // --- Session Analytics (real SQLite-backed history from this server instance) ---
+    async function refreshAnalyticsDashboard() {
+      try {
+        const [statsRes, historyRes, leaderboardRes] = await Promise.all([
+          fetch(`${API_BASE}/api/analytics/stats`),
+          fetch(`${API_BASE}/api/analytics/history?limit=30`),
+          fetch(`${API_BASE}/api/analytics/leaderboard?limit=8`)
+        ]);
+        const stats = (await statsRes.json()).stats;
+        const history = (await historyRes.json()).history;
+        const leaderboard = (await leaderboardRes.json()).leaderboard;
+
+        document.getElementById('stat-total-runs').textContent = stats.total_runs.toLocaleString();
+        document.getElementById('stat-total-trees').textContent = stats.total_trees.toLocaleString();
+        document.getElementById('stat-total-canopy').textContent = `${stats.total_canopy_ha.toLocaleString()} ha`;
+        document.getElementById('stat-total-co2e').textContent = `${stats.total_co2e_tons.toLocaleString()} t`;
+
+        const coverSeries = history.slice().reverse().map(h => h.cover_pct);
+        drawLineChart('chart-history-trend', coverSeries);
+
+        const tbody = document.getElementById('leaderboard-tbody');
+        tbody.innerHTML = '';
+        leaderboard.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-t border-surface-container-highest/50';
+          tr.innerHTML = `
+            <td class="py-1 truncate max-w-[120px]" title="${row.filename}">${row.filename}</td>
+            <td class="py-1 text-right">${row.tree_count}</td>
+            <td class="py-1 text-right">${row.cover_pct}%</td>
+            <td class="py-1 text-right text-primary">${row.co2e_tons}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error('Failed to refresh analytics dashboard:', err);
+      }
+    }
+
+    document.getElementById('btn-export-analytics').addEventListener('click', () => {
+      window.open(`${API_BASE}/api/analytics/export`, '_blank');
+    });
+
+    // --- Live System Health ---
+    async function refreshSystemHealth() {
+      try {
+        const res = await fetch(`${API_BASE}/api/system/health`);
+        const health = await res.json();
+        document.getElementById('health-tier').textContent = health.hardware_profile.tier;
+        document.getElementById('health-ram').textContent = `${health.process_rss_mb} MB`;
+        document.getElementById('health-cpu').textContent = `${health.cpu_percent}%`;
+        document.getElementById('health-uptime').textContent = `${Math.floor(health.uptime_seconds / 60)}m ${Math.round(health.uptime_seconds % 60)}s`;
+        document.getElementById('health-concurrency').textContent = health.active_inferences;
+        const tierEl = document.getElementById('hud-hardware-tier');
+        if (tierEl) tierEl.textContent = `${health.hardware_profile.tier} tier (${health.hardware_profile.total_ram_gb}GB RAM)`;
+      } catch (err) {
+        console.error('Failed to refresh system health:', err);
+      }
+    }
+
+    // --- Batch Processing ---
+    let batchFiles = [];
+    let lastBatchCsv = '';
+    document.getElementById('btn-batch-select').addEventListener('click', () => document.getElementById('batch-file-input').click());
+    document.getElementById('batch-file-input').addEventListener('change', (e) => {
+      batchFiles = Array.from(e.target.files || []);
+      document.getElementById('batch-select-text').textContent = batchFiles.length
+        ? `${batchFiles.length} file(s) selected` : 'Select Multiple Images';
+      document.getElementById('btn-batch-run').disabled = batchFiles.length === 0;
+    });
+
+    document.getElementById('btn-batch-run').addEventListener('click', async () => {
+      if (!batchFiles.length) return;
+      const btnRunText = document.getElementById('batch-run-text');
+      btnRunText.textContent = 'Processing...';
+      try {
+        const formData = new FormData();
+        batchFiles.forEach(f => formData.append('files', f));
+        formData.append('confidence', confSlider.value);
+        formData.append('gsd', gsdInput.value);
+        const res = await fetch(`${API_BASE}/api/batch`, { method: 'POST', body: formData });
+        const result = await res.json();
+        if (!result.success) throw new Error('Batch processing failed');
+
+        lastBatchCsv = result.csv_text;
+        document.getElementById('batch-results').classList.remove('hidden');
+        document.getElementById('batch-results').classList.add('flex');
+        document.getElementById('batch-processed').textContent = `${result.aggregate.processed}/${result.aggregate.total_files}`;
+        document.getElementById('batch-trees').textContent = result.aggregate.total_trees.toLocaleString();
+        document.getElementById('batch-canopy').textContent = result.aggregate.total_canopy_m2.toLocaleString();
+        document.getElementById('batch-co2e').textContent = result.aggregate.total_co2e_tons.toLocaleString();
+        if (result.errors.length) {
+          showToast(`Batch complete with ${result.errors.length} error(s).`, 'error');
+        } else {
+          showToast('Batch processing complete.', 'success');
+        }
+        refreshAnalyticsDashboard();
+      } catch (err) {
+        console.error('Batch failed:', err);
+        showToast('Batch processing failed. Check your connection and try again.', 'error');
+      } finally {
+        btnRunText.textContent = 'Run Batch';
+      }
+    });
+
+    document.getElementById('btn-batch-export-csv').addEventListener('click', () => {
+      if (!lastBatchCsv) return showToast('Run a batch first.', 'error');
+      triggerDownload(lastBatchCsv, `Flora_Batch_Report_${Date.now()}.csv`, 'text/csv');
+    });
+
+    // --- Kaggle Dataset Benchmark ---
+    async function initKaggleBenchmark() {
+      const statusText = document.getElementById('kaggle-status-text');
+      const controls = document.getElementById('kaggle-controls');
+      try {
+        const res = await fetch(`${API_BASE}/api/kaggle/datasets`);
+        if (res.status === 503) {
+          const body = await res.json();
+          statusText.textContent = body.detail || 'Kaggle credentials not configured on this backend.';
+          controls.style.display = 'none';
+          return;
+        }
+        const data = await res.json();
+        const select = document.getElementById('kaggle-dataset-select');
+        select.innerHTML = '';
+        data.datasets.forEach(d => select.add(new Option(d.label, d.slug)));
+        statusText.textContent = 'Kaggle credentials detected - real dataset benchmarking available.';
+        controls.style.display = 'flex';
+        document.getElementById('kaggle-browse-section').style.display = 'flex';
+      } catch (err) {
+        statusText.textContent = 'Could not reach the backend to check Kaggle status.';
+        console.error(err);
+      }
+    }
+
+    // Active Kaggle image selection - a third input source alongside a bundled
+    // sample and a raw upload. Analyzing it runs the exact same detection
+    // pipeline as an upload; nothing here is aggregate-only.
+    let activeKaggleDatasetSlug = null;
+    let activeKaggleFilename = null;
+
+    document.getElementById('btn-kaggle-load-images').addEventListener('click', async () => {
+      const grid = document.getElementById('kaggle-image-grid');
+      const datasetSlug = document.getElementById('kaggle-dataset-select').value;
+      grid.innerHTML = '<span class="col-span-full font-body-sm text-[11px] text-on-surface-variant">Loading real images from the dataset...</span>';
+      try {
+        const res = await fetch(`${API_BASE}/api/kaggle/images?dataset_slug=${encodeURIComponent(datasetSlug)}&limit=24`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to list dataset images');
+
+        grid.innerHTML = '';
+        data.images.forEach(img => {
+          const thumb = document.createElement('button');
+          thumb.type = 'button';
+          thumb.className = 'relative aspect-square rounded overflow-hidden bg-surface-container-lowest border border-transparent hover:border-primary transition-all';
+          thumb.title = `${img.filename} (${img.size_kb} KB)`;
+          thumb.innerHTML = `<img src="${API_BASE}${img.thumbnail_url}" class="w-full h-full object-cover" loading="lazy" alt="${img.filename}" />`;
+          thumb.onclick = () => selectKaggleImage(datasetSlug, img.filename, thumb, grid);
+          grid.appendChild(thumb);
+        });
+        showToast(`Loaded ${data.images.length} real images (dataset has ${data.total_images_in_dataset} total).`, 'success');
+      } catch (err) {
+        console.error('Failed to load Kaggle images:', err);
+        grid.innerHTML = '';
+        showToast('Could not load images from this dataset: ' + err.message, 'error');
+      }
+    });
+
+    function selectKaggleImage(datasetSlug, filename, thumbEl, grid) {
+      activeKaggleDatasetSlug = datasetSlug;
+      activeKaggleFilename = filename;
+      activeSample = null;
+      uploadedFileObj = null;
+      activeOriginLat = null;
+      activeOriginLon = null;
+      Array.from(grid.children).forEach(c => c.classList.remove('border-primary'));
+      thumbEl.classList.add('border-primary');
+      document.getElementById('loaded-tile-name').innerText = filename;
+      document.getElementById('loaded-tile-info').innerText = `Kaggle: ${datasetSlug}`;
+      document.getElementById('header-sector-name').innerText = filename;
+      document.getElementById('header-coords-val').innerText = 'Not georeferenced (Kaggle image)';
+      document.getElementById('hud-source-label').innerText = `Source: ${filename} (Kaggle: ${datasetSlug})`;
+      document.getElementById('hud-projection-text').innerText = 'Not georeferenced';
+      showToast(`Analyzing real Kaggle image: ${filename}`, 'info');
+      runCanopyDetection();
+      document.getElementById('aerial-canvas-wrapper').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    document.getElementById('btn-kaggle-run').addEventListener('click', async () => {
+      const btnText = document.getElementById('btn-kaggle-text');
+      const btnIcon = document.getElementById('btn-kaggle-icon');
+      btnText.textContent = 'Downloading & Running...';
+      btnIcon.classList.add('animate-spin');
+      try {
+        const formData = new FormData();
+        formData.append('dataset_slug', document.getElementById('kaggle-dataset-select').value);
+        formData.append('confidence', confSlider.value);
+        formData.append('gsd', gsdInput.value);
+        const res = await fetch(`${API_BASE}/api/kaggle/benchmark`, { method: 'POST', body: formData });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.detail || 'Benchmark failed');
+
+        document.getElementById('kaggle-results').classList.remove('hidden');
+        document.getElementById('kaggle-results').classList.add('flex');
+        document.getElementById('kaggle-sampled').textContent = result.images_sampled;
+        document.getElementById('kaggle-avg-trees').textContent = result.avg_tree_count;
+        document.getElementById('kaggle-avg-cover').textContent = `${result.avg_canopy_cover_percentage}%`;
+        document.getElementById('kaggle-note').textContent = result.note;
+        showToast(`Benchmark complete - ${result.images_sampled} real images processed.`, 'success');
+      } catch (err) {
+        console.error('Kaggle benchmark failed:', err);
+        showToast('Kaggle benchmark failed: ' + err.message, 'error');
+      } finally {
+        btnText.textContent = 'Run Benchmark';
+        btnIcon.classList.remove('animate-spin');
+      }
+    });
+
+    // Wire Detection Insights into the existing render pipeline
+    const _originalRenderTelemetryMetrics = renderTelemetryMetrics;
+    renderTelemetryMetrics = function (data) {
+      _originalRenderTelemetryMetrics(data);
+      renderDetectionInsights(data);
+      refreshAnalyticsDashboard();
+    };
+
     // Initial startup
     loadSampleOptions().then(() => runCanopyDetection());
+    loadChangeDetectionSamples();
+    initKaggleBenchmark();
+    refreshSystemHealth();
+    setInterval(refreshSystemHealth, 5000);
   </script>
 </body>
 

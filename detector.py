@@ -15,6 +15,8 @@ import numpy as np
 import cv2
 from PIL import Image
 
+import hardware
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("FloraDetector")
@@ -22,8 +24,9 @@ logger = logging.getLogger("FloraDetector")
 # Cap inference resolution so a large orthomosaic tile can't blow past the request
 # timeout or the container's memory ceiling. Boxes are rescaled back to the original
 # image's coordinate space after detection, so output precision on the full-resolution
-# image/metrics is unaffected.
-MAX_INFERENCE_DIM = 1600
+# image/metrics is unaffected. Sourced from hardware.py so this scales with the host
+# machine's RAM instead of a single fixed constant (see hardware.py tier table).
+MAX_INFERENCE_DIM = hardware.CONFIG["max_inference_dim"]
 
 
 def _resize_for_inference(image_rgb: np.ndarray) -> Tuple[np.ndarray, float]:
@@ -37,6 +40,32 @@ def _resize_for_inference(image_rgb: np.ndarray) -> Tuple[np.ndarray, float]:
     return resized, scale
 
 
+def _build_canopy_mask(boxes: List[Dict[str, Any]], image_shape: Tuple[int, int]) -> np.ndarray:
+    """
+    Rasterizes crown boxes into a binary canopy mask (each crown approximated as an
+    inscribed ellipse). Shared by calculate_metrics() and detect_canopy_change() so
+    both use the same footprint definition.
+    """
+    img_h, img_w = image_shape[:2]
+    mask = np.zeros((img_h, img_w), dtype=np.uint8)
+    for b in boxes:
+        xmin = max(0, int(b["xmin"]))
+        ymin = max(0, int(b["ymin"]))
+        xmax = min(img_w, int(b["xmax"]))
+        ymax = min(img_h, int(b["ymax"]))
+        w_px = max(0, xmax - xmin)
+        h_px = max(0, ymax - ymin)
+        if w_px <= 0 or h_px <= 0:
+            continue
+        cv2.ellipse(
+            mask,
+            ((xmin + xmax) // 2, (ymin + ymax) // 2),
+            (max(1, w_px // 2), max(1, h_px // 2)),
+            0, 0, 360, 255, -1
+        )
+    return mask
+
+
 def calculate_metrics(
     boxes: List[Dict[str, Any]],
     image_shape: Tuple[int, int],
@@ -44,7 +73,7 @@ def calculate_metrics(
 ) -> Dict[str, Any]:
     """
     Calculate canopy footprint, canopy cover index, and carbon sequestration.
-    
+
     Formulae:
     - total_canopy_m2 = total_pixel_area * (gsd ** 2)
     - canopy_cover_percentage = (total_pixel_area / total_image_pixel_area) * 100
@@ -52,7 +81,7 @@ def calculate_metrics(
     """
     img_h, img_w = image_shape[:2]
     total_image_pixels = float(img_h * img_w)
-    
+
     if not boxes:
         return {
             "tree_count": 0,
@@ -65,40 +94,32 @@ def calculate_metrics(
             "canopy_density_class": "Sparse / Non-Forested",
             "gsd": gsd_meters_per_pixel
         }
-    
+
     # Create a binary raster mask to account for overlapping canopy boundaries accurately
-    mask = np.zeros((img_h, img_w), dtype=np.uint8)
+    mask = _build_canopy_mask(boxes, image_shape)
     crown_areas_pixels = []
     crown_diameters_m = []
-    
+
     for b in boxes:
         xmin = max(0, int(b["xmin"]))
         ymin = max(0, int(b["ymin"]))
         xmax = min(img_w, int(b["xmax"]))
         ymax = min(img_h, int(b["ymax"]))
-        
+
         w_px = max(0, xmax - xmin)
         h_px = max(0, ymax - ymin)
-        
-        # Approximate crown footprint as an inscribed ellipse within the bounding box
-        cv2.ellipse(
-            mask,
-            ((xmin + xmax) // 2, (ymin + ymax) // 2),
-            (max(1, w_px // 2), max(1, h_px // 2)),
-            0, 0, 360, 255, -1
-        )
-        
+
         # Area and diameter metrics
         crown_area_px = float(w_px * h_px)
         crown_areas_pixels.append(crown_area_px)
-        
+
         # Effective crown diameter in meters = sqrt(4 * area / pi) * gsd
         eff_diam_m = np.sqrt(max(0.1, (4.0 * crown_area_px * (gsd_meters_per_pixel ** 2)) / np.pi))
         crown_diameters_m.append(eff_diam_m)
-    
+
     # Total merged canopy pixel area from raster mask (avoids overcounting double-covered overlaps)
     total_merged_pixels = float(np.count_nonzero(mask))
-    
+
     # If mask is empty due to small boxes, fallback to box area sum
     if total_merged_pixels == 0:
         total_merged_pixels = float(sum(crown_areas_pixels))
@@ -154,15 +175,21 @@ def draw_styled_annotations(
     boxes: List[Dict[str, Any]],
     show_boxes: bool = True,
     show_heatmap: bool = False,
-    show_centroids: bool = True
+    show_centroids: bool = True,
+    heatmap_mode: str = "density"
 ) -> np.ndarray:
     """
     Renders high-tech emerald cyber telemetry bounding vectors, corner brackets,
     and centroid crosshairs directly onto the image with glowing styling.
+
+    heatmap_mode:
+    - "density": every crown contributes equally (highlights canopy concentration).
+    - "confidence": each crown is weighted by its detection score (highlights
+      low-confidence regions - shadow/overlap-degraded areas - as cooler zones).
     """
     annotated = image_rgb.copy()
     h, w = annotated.shape[:2]
-    
+
     # Optional Heatmap Layer Overlay
     if show_heatmap and len(boxes) > 0:
         heatmap_mask = np.zeros((h, w), dtype=np.float32)
@@ -170,8 +197,9 @@ def draw_styled_annotations(
             cx = int((b["xmin"] + b["xmax"]) / 2)
             cy = int((b["ymin"] + b["ymax"]) / 2)
             radius = max(8, int((b["xmax"] - b["xmin"] + b["ymax"] - b["ymin"]) / 4))
-            cv2.circle(heatmap_mask, (cx, cy), radius, 1.0, -1)
-        
+            weight = float(b.get("score", 1.0)) if heatmap_mode == "confidence" else 1.0
+            cv2.circle(heatmap_mask, (cx, cy), radius, weight, -1)
+
         heatmap_mask = cv2.GaussianBlur(heatmap_mask, (51, 51), 0)
         max_val = np.max(heatmap_mask)
         if max_val > 0:
@@ -254,10 +282,36 @@ def draw_styled_annotations(
     return annotated
 
 
-def detect_tree_crowns(image_rgb: np.ndarray, confidence_threshold: float = 0.40) -> List[Dict[str, Any]]:
+def _apply_roi_mask(image_rgb: np.ndarray, roi_polygon: List[List[float]]) -> np.ndarray:
     """
-    Classical multi-scale spectral canopy detector - no ML model/weights required.
-    Extracts tree crown contours via adaptive thresholding of the Excess Green Index.
+    Zeroes out pixels outside a user-drawn polygon so detection only runs inside the
+    region of interest. Polygon points may be normalized (0-1) or absolute pixel
+    coordinates - values <= 1.5 for every point are treated as normalized.
+    """
+    h, w = image_rgb.shape[:2]
+    is_normalized = all(0.0 <= p[0] <= 1.5 and 0.0 <= p[1] <= 1.5 for p in roi_polygon)
+    pts = np.array(
+        [
+            [p[0] * w, p[1] * h] if is_normalized else [p[0], p[1]]
+            for p in roi_polygon
+        ],
+        dtype=np.int32
+    ).reshape((-1, 1, 2))
+
+    mask = np.zeros((h, w), dtype=np.uint8)
+    cv2.fillPoly(mask, [pts], 255)
+    masked = image_rgb.copy()
+    masked[mask == 0] = 0
+    return masked
+
+
+def _extract_scored_crowns(image_rgb: np.ndarray) -> List[Dict[str, Any]]:
+    """
+    Runs the (expensive, one-time) contour extraction over the Excess Green Index
+    and returns every geometrically-plausible crown candidate with its score,
+    unfiltered by confidence threshold. Both detect_tree_crowns() and
+    detect_tree_crowns_multi() build on this single pass so a threshold sweep
+    across N values costs the same as one detection, not N.
     """
     h, w = image_rgb.shape[:2]
     # Excess Green Index (ExG = 2G - R - B)
@@ -265,17 +319,17 @@ def detect_tree_crowns(image_rgb: np.ndarray, confidence_threshold: float = 0.40
     r, g, b = img_f[:, :, 0], img_f[:, :, 1], img_f[:, :, 2]
     exg = (2.0 * g - r - b)
     exg_norm = cv2.normalize(exg, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    
+
     # Adaptive thresholding and morphological crown filtering
     blurred = cv2.GaussianBlur(exg_norm, (11, 11), 0)
     _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    
+
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    boxes = []
+
+    candidates = []
     min_area = max(30, int((h * w) * 0.00008))
     max_area = int((h * w) * 0.15)
-    
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if min_area <= area <= max_area:
@@ -284,28 +338,108 @@ def detect_tree_crowns(image_rgb: np.ndarray, confidence_threshold: float = 0.40
             aspect = float(bw) / max(1, bh)
             if 0.35 <= aspect <= 2.8:
                 # Score based on greenness intensity and compactness
-                mask_roi = thresh[y:y+bh, x:x+bw]
                 compactness = float(area) / max(1.0, float(bw * bh))
                 score = min(0.98, max(0.42, 0.50 + compactness * 0.45))
-                
-                if score >= confidence_threshold:
-                    boxes.append({
-                        "xmin": float(x),
-                        "ymin": float(y),
-                        "xmax": float(x + bw),
-                        "ymax": float(y + bh),
-                        "score": round(score, 3),
-                        "label": "Tree"
-                    })
-                    
-    # Sort boxes by score descending
+                candidates.append({
+                    "xmin": float(x),
+                    "ymin": float(y),
+                    "xmax": float(x + bw),
+                    "ymax": float(y + bh),
+                    "score": round(score, 3),
+                    "label": "Tree"
+                })
+
+    return candidates
+
+
+def detect_tree_crowns(image_rgb: np.ndarray, confidence_threshold: float = 0.40) -> List[Dict[str, Any]]:
+    """
+    Classical multi-scale spectral canopy detector - no ML model/weights required.
+    Extracts tree crown contours via adaptive thresholding of the Excess Green Index.
+    """
+    candidates = _extract_scored_crowns(image_rgb)
+    boxes = [b for b in candidates if b["score"] >= confidence_threshold]
     boxes.sort(key=lambda x: x["score"], reverse=True)
     return boxes
 
 
-def generate_geojson(boxes: List[Dict[str, Any]], metrics: Dict[str, Any], origin_lat: float = 21.9497, origin_lon: float = 88.8997) -> Dict[str, Any]:
+def detect_tree_crowns_multi(image_rgb: np.ndarray, thresholds: List[float]) -> Dict[float, int]:
+    """
+    Threshold sensitivity sweep: runs contour extraction ONCE, then buckets the
+    resulting crown count at each requested confidence threshold. Used by
+    /api/sensitivity so sweeping N thresholds costs the same as a single detection
+    pass instead of N full re-detections.
+    """
+    candidates = _extract_scored_crowns(image_rgb)
+    scores = [b["score"] for b in candidates]
+    return {t: sum(1 for s in scores if s >= t) for t in thresholds}
+
+
+def compute_deforestation_risk(cover_pct: float, canopy_loss_m2: float = 0.0, canopy_gain_m2: float = 0.0) -> Dict[str, Any]:
+    """
+    Transparent composite risk score (0-100, higher = more concerning) from real
+    computed metrics only - no learned/opaque model. Two components:
+    - Sparsity component: low current cover is inherently higher-risk (already-degraded site).
+    - Trend component: net canopy loss raises risk, net gain lowers it, scaled relative
+      to the loss magnitude (a big loss on a big site matters more than a small one).
+    """
+    sparsity_component = max(0.0, 100.0 - cover_pct)  # 0% cover -> 100, 100% cover -> 0
+    net_change_m2 = canopy_gain_m2 - canopy_loss_m2
+    denom = max(1.0, canopy_loss_m2 + canopy_gain_m2)
+    # Loss-weighted trend term: net loss pushes risk up, net gain contributes nothing
+    # (a healthy trend shouldn't offset an already-sparse site's base risk).
+    trend_component = max(0.0, -1.0 * (net_change_m2 / denom) * 50.0)
+
+    risk_score = round(max(0.0, min(100.0, sparsity_component * 0.6 + trend_component * 0.8)), 1)
+
+    if risk_score >= 70:
+        band = "High Risk"
+    elif risk_score >= 40:
+        band = "Moderate Risk"
+    elif risk_score >= 15:
+        band = "Low Risk"
+    else:
+        band = "Minimal Risk"
+
+    return {
+        "risk_score": risk_score,
+        "risk_band": band,
+        "formula": "0.6 * (100 - cover_pct) + 0.8 * max(0, -net_change_ratio * 50)"
+    }
+
+
+def generate_world_file(origin_lat: float, origin_lon: float, gsd_meters_per_pixel: float) -> str:
+    """
+    Generates a standard ESRI world file (.pgw/.wld) six-line affine transform,
+    letting the annotated image be dropped straight into QGIS/ArcGIS as a
+    georeferenced raster. Pure math from values already computed - no geo library.
+    """
+    lat_deg_per_pixel = -(gsd_meters_per_pixel / 111320.0)  # negative: image Y increases downward, latitude decreases
+    lon_deg_per_pixel = gsd_meters_per_pixel / (111320.0 * np.cos(np.radians(origin_lat)))
+    lines = [
+        f"{lon_deg_per_pixel:.12f}",  # pixel size in x-direction
+        "0.0",                        # rotation (row)
+        "0.0",                        # rotation (column)
+        f"{lat_deg_per_pixel:.12f}",  # pixel size in y-direction (negative)
+        f"{origin_lon:.12f}",         # x-coordinate of center of upper-left pixel
+        f"{origin_lat:.12f}",         # y-coordinate of center of upper-left pixel
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def generate_geojson(
+    boxes: List[Dict[str, Any]],
+    metrics: Dict[str, Any],
+    origin_lat: float = 0.0,
+    origin_lon: float = 0.0,
+    is_georeferenced: bool = False
+) -> Dict[str, Any]:
     """
     Creates standard RFC 7946 GeoJSON FeatureCollection for GIS and carbon audits.
+    When is_georeferenced is False, origin_lat/origin_lon are an arbitrary local
+    (0,0) placeholder - coordinates are still emitted (so polygon geometry/shape
+    is usable) but metadata.georeferenced=False makes clear they aren't real
+    map coordinates, instead of silently presenting a fabricated location.
     """
     features = []
     gsd = metrics.get("gsd", 0.20)
@@ -343,7 +477,7 @@ def generate_geojson(boxes: List[Dict[str, Any]], metrics: Dict[str, Any], origi
                 "width_px": round(xmax - xmin, 1),
                 "height_px": round(ymax - ymin, 1),
                 "canopy_area_m2": round((xmax - xmin) * (ymax - ymin) * (gsd ** 2), 2),
-                "species_class": "Mangrove / Tropical Forest",
+                "species_class": "Unclassified (spectral engine does not perform species classification)",
                 "detected_by": "Flora Carbon AI Spectral Engine v1.4"
             }
         }
@@ -354,6 +488,7 @@ def generate_geojson(boxes: List[Dict[str, Any]], metrics: Dict[str, Any], origi
         "metadata": {
             "generated_by": "Flora Carbon AI",
             "model": "Excess Green Index + Contour Segmentation",
+            "georeferenced": is_georeferenced,
             "total_trees": metrics.get("tree_count", 0),
             "total_canopy_m2": metrics.get("total_canopy_m2", 0.0),
             "canopy_cover_percentage": metrics.get("canopy_cover_percentage", 0.0),
@@ -370,18 +505,26 @@ def analyze_tree_canopy(
     gsd_meters_per_pixel: float = 0.20,
     show_boxes: bool = True,
     show_heatmap: bool = False,
-    show_centroids: bool = True
+    show_centroids: bool = True,
+    heatmap_mode: str = "density",
+    roi_polygon: Any = None,
+    origin_lat: float = 0.0,
+    origin_lon: float = 0.0,
+    is_georeferenced: bool = False
 ) -> Dict[str, Any]:
     """
     Main entry point for tree crown detection and canopy telemetry.
-    
+
     Parameters:
     - image_input: File path, bytes, PIL Image, or numpy array
     - confidence_threshold: Float between 0.10 and 0.90
     - gsd_meters_per_pixel: Ground Sampling Distance (default 0.20 m/px)
     - show_boxes: Boolean toggle for bounding box overlay
-    - show_heatmap: Boolean toggle for density gradient
+    - show_heatmap: Boolean toggle for density/confidence gradient
     - show_centroids: Boolean toggle for centroid crosshairs
+    - heatmap_mode: "density" (equal-weighted) or "confidence" (score-weighted)
+    - roi_polygon: Optional list of [x, y] points (normalized 0-1 or absolute pixels)
+      constraining detection to a user-drawn region of interest
     """
     start_time = time.time()
     
@@ -407,10 +550,16 @@ def analyze_tree_canopy(
         raise ValueError("Unsupported image input format.")
 
     h, w = image_rgb.shape[:2]
-    
+
     # 2. Run Detection on a resolution-capped copy so large orthomosaic tiles stay
     # within free-tier CPU/memory/time budgets.
     inference_rgb, inference_scale = _resize_for_inference(image_rgb)
+
+    # Constrain detection to a user-drawn ROI, if provided. Applied on the inference-
+    # scale copy only - the full-resolution image is left untouched for annotation.
+    if roi_polygon:
+        inference_rgb = _apply_roi_mask(inference_rgb, roi_polygon)
+
     model_source = "Spectral Orthomosaic Segmenter (Excess Green Index + Contour Engine)"
     boxes = detect_tree_crowns(inference_rgb, confidence_threshold)
     logger.info(f"Detected {len(boxes)} crowns (threshold >= {confidence_threshold}).")
@@ -436,11 +585,13 @@ def analyze_tree_canopy(
         boxes=boxes,
         show_boxes=show_boxes,
         show_heatmap=show_heatmap,
-        show_centroids=show_centroids
+        show_centroids=show_centroids,
+        heatmap_mode=heatmap_mode
     )
     
-    # 5. Generate GeoJSON and CSV Data
-    geojson_data = generate_geojson(boxes, metrics)
+    # 5. Generate GeoJSON and CSV Data - using the real per-sample origin, not a
+    # fixed default, so exports for non-Sundarbans sites aren't mislabeled.
+    geojson_data = generate_geojson(boxes, metrics, origin_lat=origin_lat, origin_lon=origin_lon, is_georeferenced=is_georeferenced)
     
     # Generate CSV text (stdlib csv module - avoids pulling in pandas just to serialize rows)
     csv_fieldnames = ["Crown_ID", "Confidence", "X_Min", "Y_Min", "X_Max", "Y_Max", "Width_px", "Height_px", "Area_m2"]
@@ -493,4 +644,56 @@ def analyze_tree_canopy(
                 "description": "Imagery with GSD > 0.45 m/pixel lacks sub-meter crown border resolution, leading to false-positive canopy area inflation (~6.2%)."
             }
         ]
+    }
+
+
+def detect_canopy_change(
+    result_a: Dict[str, Any],
+    result_b: Dict[str, Any],
+    gsd_meters_per_pixel: float = 0.20
+) -> Dict[str, Any]:
+    """
+    Compares two analyze_tree_canopy() results of the same site (e.g. two survey
+    dates) and reports canopy loss/gain. Image B's mask is resized to image A's
+    dimensions - this assumes both images frame the same site/extent; there is no
+    georectification/alignment beyond a plain resize, which is a known limitation
+    for tiles that aren't already co-registered.
+    """
+    shape_a = (result_a["image_dimensions"]["height"], result_a["image_dimensions"]["width"])
+    shape_b = (result_b["image_dimensions"]["height"], result_b["image_dimensions"]["width"])
+
+    mask_a = _build_canopy_mask(result_a["boxes"], shape_a)
+    mask_b_native = _build_canopy_mask(result_b["boxes"], shape_b)
+    mask_b = cv2.resize(mask_b_native, (shape_a[1], shape_a[0]), interpolation=cv2.INTER_NEAREST)
+
+    loss_mask = cv2.bitwise_and(mask_a, cv2.bitwise_not(mask_b))
+    gain_mask = cv2.bitwise_and(mask_b, cv2.bitwise_not(mask_a))
+
+    loss_px = float(np.count_nonzero(loss_mask))
+    gain_px = float(np.count_nonzero(gain_mask))
+    gsd_sq = gsd_meters_per_pixel ** 2
+
+    canopy_loss_m2 = round(loss_px * gsd_sq, 2)
+    canopy_gain_m2 = round(gain_px * gsd_sq, 2)
+    net_change_m2 = round(canopy_gain_m2 - canopy_loss_m2, 2)
+
+    # Reuse the same AGB/CO2e conversion factors as calculate_metrics() so the change
+    # figure is directly comparable to the per-image carbon estimates.
+    net_change_ha = net_change_m2 / 10000.0
+    net_agb_tons = round((net_change_ha * 220.0), 2)
+    net_change_co2e_tons = round(net_agb_tons * 0.47 * 3.667, 2)
+
+    # Build a red/green overlay on top of image A: red = loss, green = gain.
+    overlay = np.zeros((*shape_a, 3), dtype=np.uint8)
+    overlay[loss_mask > 0] = [220, 40, 40]
+    overlay[gain_mask > 0] = [40, 200, 90]
+
+    return {
+        "canopy_loss_m2": canopy_loss_m2,
+        "canopy_gain_m2": canopy_gain_m2,
+        "net_change_m2": net_change_m2,
+        "net_change_co2e_tons": net_change_co2e_tons,
+        "overlay_mask": overlay,
+        "loss_pixels": int(loss_px),
+        "gain_pixels": int(gain_px)
     }
